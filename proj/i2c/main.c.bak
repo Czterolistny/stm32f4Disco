@@ -1,0 +1,353 @@
+#include "stm32f4xx.h"
+#include "stm32f4xx_rcc.h"
+#include "stm32f4xx_gpio.h"
+#include "stm32f4xx_usart.h"
+#include "stm32f4xx_i2c.h"
+#include "../usart/uart.h"
+#include "../common/dbg_pin.h"
+#include <memory.h>
+
+volatile uint32_t msTicks = 0;
+
+void delay_ms(uint32_t ms)
+{
+	uint32_t ticks = msTicks + ms;
+	
+	while(ticks > msTicks);
+	while(ticks < msTicks);
+
+}
+
+void SysTick_Handler()
+{	
+	msTicks++;
+}
+
+void I2C1_Init(void)
+{
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+	
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+	
+	GPIO_InitTypeDef GPIO_InitStruct;
+	
+	GPIO_StructInit(&GPIO_InitStruct);	
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_9;
+    GPIO_Init(GPIOB, &GPIO_InitStruct);
+	
+	GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_I2C1);
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource9, GPIO_AF_I2C1);
+	
+	//***********************************
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_4;
+	GPIO_Init(GPIOD, &GPIO_InitStruct);
+	GPIO_SetBits(GPIOD, GPIO_Pin_4);
+	//***********************************
+	
+	I2C_InitTypeDef I2C_InitStruct;	
+
+	I2C_StructInit(&I2C_InitStruct);
+	I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;
+	I2C_InitStruct.I2C_ClockSpeed = 100000;
+	I2C_InitStruct.I2C_Ack = I2C_Ack_Enable;
+	I2C_Init(I2C1, &I2C_InitStruct);
+	I2C_Cmd(I2C1, ENABLE);
+	
+	    //MP45DT02 CLK-PB10
+    //GPIO_InitTypeDef gpio;
+    //gpio.GPIO_Pin = GPIO_Pin_7 | GPIO_Pin_10 | GPIO_Pin_12;
+    //gpio.GPIO_Mode = GPIO_Mode_AF;
+    //gpio.GPIO_OType = GPIO_OType_PP;
+    //gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    //gpio.GPIO_Speed = GPIO_Speed_50MHz;
+    //GPIO_Init(GPIOB, &gpio);
+    //GPIO_PinAFConfig(GPIOB, GPIO_PinSource7 | GPIO_PinSource10 | GPIO_PinSource12, GPIO_AF_SPI3);
+//
+    ////MP45DT02 DOUT-PC3
+    ////RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+    ////gpio.GPIO_Pin = GPIO_Pin_4;
+    ////gpio.GPIO_OType = GPIO_OType_PP;
+    ////gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    ////gpio.GPIO_Speed = GPIO_Speed_50MHz;
+    ////GPIO_Init(GPIOC, &gpio);
+	////GPIO_WriteBit(GPIOC, GPIO_PinSource7, Bit_SET);
+	//
+	//RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
+    //I2S_InitTypeDef i2s;
+    //i2s.I2S_AudioFreq = 16*44100;
+    //i2s.I2S_Standard = I2S_Standard_LSB;
+    //i2s.I2S_DataFormat = I2S_DataFormat_16b;
+    //i2s.I2S_CPOL = I2S_CPOL_High;
+    //i2s.I2S_Mode = I2S_Mode_MasterRx | I2S_Mode_MasterTx;
+    //i2s.I2S_MCLKOutput = I2S_MCLKOutput_Disable;
+    //I2S_Init(SPI3, &i2s);
+    //I2S_Cmd(SPI3, ENABLE);
+
+	//Start
+	//SPI_I2S_ITConfig(SPI3, SPI_I2S_IT_TXE, ENABLE);
+	
+}
+
+static void I2C1_write(uint8_t reg, uint8_t i2c_addr)
+{
+	while (I2C1 ->SR2 & I2C_SR2_BUSY );
+	I2C_GenerateSTART(I2C1, ENABLE);
+	
+	while (I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT) != SUCCESS);
+
+	I2C_AcknowledgeConfig(I2C1, ENABLE); 
+	I2C_Send7bitAddress(I2C1, i2c_addr, I2C_Direction_Transmitter); 
+	while (I2C_CheckEvent(I2C1, I2C_EVENT_SLAVE_RECEIVER_ADDRESS_MATCHED) != SUCCESS);
+
+	I2C_SendData(I2C1, reg);
+	while (I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED) != SUCCESS);
+	I2C_GenerateSTOP(I2C1, ENABLE);
+}
+
+void I2C1_read(uint8_t i2c_addr, uint8_t reg_addr, uint8_t *read_buf, uint8_t size)
+{
+	I2C1_write(i2c_addr, reg_addr);
+	I2C_GenerateSTART(I2C1, ENABLE);
+	while (I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT) != SUCCESS);
+	
+	I2C_Send7bitAddress(I2C1, i2c_addr, I2C_Direction_Receiver);
+	while (I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED) != SUCCESS);
+	
+	for(int i = 0; i < size; ++i ) {
+		while(I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED) != SUCCESS);
+		read_buf[i++] = I2C_ReceiveData(I2C1);
+    }
+	
+	I2C_AcknowledgeConfig(I2C1, DISABLE);
+	I2C_GenerateSTOP(I2C1, ENABLE);
+	
+}
+
+#define POWER_DOWN 0b00000001
+#define POWER_UP 0b10011110
+
+#define CHIP_ID_REG 0x01
+
+#define POWER_STATUS_REG_1 0x02
+#define POWER_STATUS_REG_2 0x04
+
+typedef struct {
+	
+	uint8_t ID;	//0x01;
+	uint16_t PowerCtl; //0x02 
+	uint8_t ClockingCtl;
+	uint16_t InterfaceCtl;
+	uint16_t PassthroughSelect;
+	uint8_t ZC_SR_Setting;
+	uint8_t PassthroughGangCtl;
+	uint16_t PlaybackCtl;
+	uint8_t MiscCtl;
+	uint16_t PassthroughVol;
+	uint16_t PCMA_Vol;
+	uint32_t BEEP_Ctl;
+	uint16_t MasterVol;
+	uint16_t HeadphoneVol;
+	uint16_t SpeakerVol;
+	uint8_t ChannelMixAndSwap;
+	uint16_t LimitCtl;
+	uint8_t LimitterAttack;
+	uint8_t OverflowClockStat;
+	uint16_t BatteryParam;
+	uint8_t SpeakerStatus;
+	uint8_t ChargePumpFreq;
+	
+}CS43L22_t;
+
+void initStruct(CS43L22_t *cs43l22)
+{
+	memset(cs43l22, 0, sizeof(*cs43l22));
+}
+
+#define CLOCK_CONTROL_REG 0x05
+#define INTERFACE_CONTROL_REG_1 0x06
+#define PASSTHROUGH_SELECT_REG_1 0x08
+#define ZC_SR_CONTROL_REG 0x0a
+#define PASSTHROUGH_CONTROL_REG_1 0x0c
+#define PLAYBACK_CONTROL_REG_1 0x0d
+#define PLAYBACK_CONTROL_REG_2 0x0e
+#define MISC_CTL_REG 0x0e
+#define PASSTHROUGH_VOL_REG_1 0x14
+#define PCMxVOL_REG 0x1a
+#define BEEPx_CTL 0x1c
+#define MASTER_VOL_REG 0x20
+#define HEADPHONE_VOL 0x22
+#define CHANNEL_MIX_SWAP_REG 0x26
+#define LIMIT_CTL_REG 0x27
+#define LIMITTER_ATTACK_REG 0x29
+#define OVERFLOW_CLOCK_STAT_REG 0x2e
+#define BATTERY_PARAM_REG 0x2f
+#define SPEAKER_STATUS_REG 0x31
+#define CHARGE_PUMP_FREQ 0x34
+
+
+void read_CS43L22_regs(CS43L22_t *cs43l22)
+{
+	I2C1_read(0x94, CHIP_ID_REG, &cs43l22->ID, 1);
+	
+	uint8_t powerStatus[2];
+	I2C1_read(0x94, POWER_STATUS_REG_1, &powerStatus[0], 2);
+	cs43l22->PowerCtl = powerStatus[0] | (powerStatus[1] << 8);
+	
+	I2C1_read(0x94, CLOCK_CONTROL_REG, &cs43l22->ClockingCtl, 1);
+	
+	uint8_t interfaceStatus[2];
+	I2C1_read(0x94, INTERFACE_CONTROL_REG_1, &interfaceStatus[0], 2);
+	cs43l22->InterfaceCtl = interfaceStatus[0] | (interfaceStatus[1] << 8);
+	
+	uint8_t PassthroughSelect[2];
+	I2C1_read(0x94, INTERFACE_CONTROL_REG_1, &PassthroughSelect[0], 2);
+	cs43l22->PassthroughSelect = PassthroughSelect[0] | (PassthroughSelect[1] << 8);
+	
+	I2C1_read(0x94, ZC_SR_CONTROL_REG, &cs43l22->ZC_SR_Setting, 1);
+	
+	I2C1_read(0x94, PASSTHROUGH_SELECT_REG_1, &cs43l22->PassthroughGangCtl, 1);
+	
+	uint8_t PlaybackCtl[2];
+	I2C1_read(0x94, PLAYBACK_CONTROL_REG_1, &PlaybackCtl[0], 1);
+	I2C1_read(0x94, PLAYBACK_CONTROL_REG_2, &PlaybackCtl[1], 1);
+	cs43l22->PlaybackCtl = PlaybackCtl[0] | (PlaybackCtl[1] << 8);
+
+	I2C1_read(0x94, ZC_SR_CONTROL_REG, &cs43l22->ZC_SR_Setting, 1);
+	I2C1_read(0x94, MISC_CTL_REG, &cs43l22->MiscCtl, 1);
+	
+	uint8_t PassthroughVol[2];
+	I2C1_read(0x94, PASSTHROUGH_VOL_REG_1, &PassthroughVol[0], 2);
+	cs43l22->PassthroughVol = PassthroughVol[0] | (PassthroughVol[1] << 8);
+	
+	uint8_t PCMx_Vol[2];
+	I2C1_read(0x94, PCMxVOL_REG, &PCMx_Vol[0], 2);
+	cs43l22->PassthroughVol = PCMx_Vol[0] | (PCMx_Vol[1] << 8);
+	
+	uint8_t BeepCtl[4];
+	I2C1_read(0x94, BEEPx_CTL, &BeepCtl[0], 4);
+	cs43l22->BEEP_Ctl = BeepCtl[0] | (BeepCtl[1] << 8) | (BeepCtl[2] << 16) | (BeepCtl[3] << 24);
+	
+	uint8_t Volume[2];
+	I2C1_read(0x94, MASTER_VOL_REG, &Volume[0], 2);
+	cs43l22->MasterVol = Volume[0] | (Volume[1] << 8);
+	
+	I2C1_read(0x94, HEADPHONE_VOL, &Volume[0], 2);
+	cs43l22->MasterVol = Volume[0] | (Volume[1] << 8);
+	
+	I2C1_read(0x94, CHANNEL_MIX_SWAP_REG, &cs43l22->ChannelMixAndSwap, 1);
+	
+	uint8_t LimitCtl[2];
+	I2C1_read(0x94, LIMIT_CTL_REG, &LimitCtl[0], 2);
+	cs43l22->LimitCtl = LimitCtl[0] | (LimitCtl[1] << 8);
+	
+	I2C1_read(0x94, LIMITTER_ATTACK_REG, &cs43l22->LimitterAttack, 1);
+	I2C1_read(0x94, OVERFLOW_CLOCK_STAT_REG, &cs43l22->OverflowClockStat, 1);
+	
+	uint8_t BatteryParam[2];
+	I2C1_read(0x94, BATTERY_PARAM_REG, &BatteryParam[0], 2);
+	cs43l22->BatteryParam = BatteryParam[0] | (BatteryParam[1] << 8);
+	
+	I2C1_read(0x94, SPEAKER_STATUS_REG, &cs43l22->SpeakerStatus, 1);
+	I2C1_read(0x94, CHARGE_PUMP_FREQ, &cs43l22->ChargePumpFreq, 1);
+	
+}
+
+void GetChipId(uint8_t *chipId)
+{
+	
+	I2C1_read(0x94, 0x01, &chipId[0], 1);
+	I2C1_read(0x94, 0x02, &chipId[1], 1);
+	I2C1_read(0x94, 0x04, &chipId[2], 1);
+}
+
+uint8_t getPowerStatus1(CS43L22_t *cs43l22)
+{
+	uint8_t powerStatus;
+	I2C1_read(0x94, POWER_STATUS_REG_1, &powerStatus, 1);
+	return powerStatus;
+}
+
+uint8_t getPowerStatus2(CS43L22_t *cs43l22)
+{
+	uint8_t powerStatus;
+	I2C1_read(0x94, POWER_STATUS_REG_2, &powerStatus, 1);
+	return powerStatus;
+}
+
+uint8_t getClockStatus(CS43L22_t *cs43l22)
+{
+	uint8_t clockStatus;
+	I2C1_read(0x94, CLOCK_CONTROL_REG, &clockStatus, 1);
+	return clockStatus;
+}
+
+int main(void) {
+  
+	SystemInit();
+	SysTick_Config(SystemCoreClock / 1000);
+	InitTestPin();
+
+	USART2_Init();
+	I2C1_Init();
+
+	uint8_t i2c_buf[4] = {0x00, 0x00, 0x00, 0x00};
+
+	GetChipId(&i2c_buf[0]);
+	//USART2_SendNoneBlocking(&i2c_buf[0], 3);
+	
+	//CS43L22_t audio;
+	//initStruct(&audio);
+	//read_CS43L22_regs(&audio);
+	//USART2_SendNoneBlocking(&audio.ID, 1);
+	
+	SetTestPin();
+	
+for (;;){};
+}
+
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
+	
+	GPIO_InitTypeDef GPIO_InitStruct;
+	
+	GPIO_StructInit(&GPIO_InitStruct);	
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+    GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
+	GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_7 | GPIO_Pin_8;// 7-SDA, 8-CLK
+    GPIO_Init(GPIOB, &GPIO_InitStruct);
+	
+	GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_I2C1);
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource8, GPIO_AF_I2C1);
+	
+	I2C_InitTypeDef I2C_InitStruct;	
+
+	I2C_StructInit(&I2C_InitStruct);
+	I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;
+	I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;
+	I2C_InitStruct.I2C_ClockSpeed = 100000;
+	I2C_InitStruct.I2C_Ack = I2C_Ack_Enable;
+	I2C_Init(I2C1, &I2C_InitStruct);
+	
+	NVIC_InitTypeDef NVIC_InitStruct;
+    NVIC_InitStruct.NVIC_IRQChannel = I2C1_ER_IRQn;
+    NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0;
+    NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0;
+    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStruct);
+	
+	//I2C_ITConfig(I2C1, I2C_IT_ERR, ENABLE);
+    I2C_Cmd(I2C1, ENABLE);
+	
+	
+	
+	
+

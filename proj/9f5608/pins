@@ -1,0 +1,12 @@
+PA6 - pixclk
+PA4 - hsync
+PB7 - vsync
+
+PC6, PA9 - 0
+PC7, PA10 - 1
+PE0, PC8 - 2
+PE1, PC9 - 3
+PE4, PC11 - 4
+PB6 - 5
+PE5, PB8 - 6
+PE6, PB9 - 7
