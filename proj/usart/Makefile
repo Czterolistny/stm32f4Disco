@@ -21,6 +21,7 @@ INCLUDE+=-I$(CURDIR)
 
 BUILD_DIR = $(CURDIR)/build
 BIN_DIR = $(CURDIR)/binary
+COMMON_OBJ_DIR = $(CURDIR)/../build_obj
 
 # vpath is used so object files are written to the current directory instead
 # of the same directory as their source files
@@ -30,55 +31,20 @@ vpath %.s $(STARTUP)
 ASRC=startup_stm32f4xx.s
 
 # Project Source Files
-SRC+=stm32f4xx_it.c
-SRC+=system_stm32f4xx.c
 SRC+=main.c
-SRC+=dbg_pin.c
 SRC+=uart.c
 
+# Project Source Files
+COMMON_SRC+=misc.c
+COMMON_SRC+=stm32f4xx_it.c
+COMMON_SRC+=system_stm32f4xx.c
+COMMON_SRC+=dbg_pin.c
+
 # Standard Peripheral Source Files
-SRC+=misc.c
-#SRC+=stm32f4xx_dcmi.c
-#SRC+=stm32f4xx_hash.c
-#SRC+=stm32f4xx_rtc.c
-#SRC+=stm32f4xx_adc.c
-SRC+=stm32f4xx_dma.c
-#SRC+=stm32f4xx_hash_md5.c
-#SRC+=stm32f4xx_sai.c
-#SRC+=stm32f4xx_can.c
-#SRC+=stm32f4xx_dma2d.c
-#SRC+=stm32f4xx_hash_sha1.c
-#SRC+=stm32f4xx_sdio.c
-#SRC+=stm32f4xx_cec.c
-#SRC+=stm32f4xx_dsi.c
-#SRC+=stm32f4xx_i2c.c
-#SRC+=stm32f4xx_spdifrx.c
-#SRC+=stm32f4xx_crc.c
-#SRC+=stm32f4xx_exti.c
-#SRC+=stm32f4xx_iwdg.c
-#SRC+=stm32f4xx_spi.c
-#SRC+=stm32f4xx_cryp.c
-#SRC+=stm32f4xx_flash.c
-#SRC+=stm32f4xx_lptim.c
-#SRC+=stm32f4xx_syscfg.c
-#SRC+=stm32f4xx_cryp_aes.c
-#SRC+=stm32f4xx_flash_ramfunc.c
-#SRC+=stm32f4xx_ltdc.c
-#SRC+=stm32f4xx_tim.c
-#SRC+=stm32f4xx_cryp_des.c
-#SRC+=stm32f4xx_fmc.c
-#SRC+=stm32f4xx_pwr.c
-SRC+=stm32f4xx_usart.c
-#SRC+=stm32f4xx_cryp_tdes.c
-#SRC+=stm32f4xx_fmpi2c.c
-#SRC+=stm32f4xx_qspi.c
-#SRC+=stm32f4xx_wwdg.c
-#SRC+=stm32f4xx_dac.c
-#SRC+=stm32f4xx_fsmc.c
-SRC+=stm32f4xx_rcc.c
-#SRC+=stm32f4xx_dbgmcu.c
-SRC+=stm32f4xx_gpio.c
-#SRC+=stm32f4xx_rng.c
+COMMON_SRC+=stm32f4xx_dma.c
+COMMON_SRC+=stm32f4xx_usart.c
+COMMON_SRC+=stm32f4xx_rcc.c
+COMMON_SRC+=stm32f4xx_gpio.c
 
 CDEFS=-DUSE_STDPERIPH_DRIVER
 CDEFS+=-DSTM32F4XX
@@ -104,16 +70,21 @@ GDB=$(TOOLCHAIN_PATH)/$(TOOLCHAIN_PREFIX)-gdb
 SIZE=$(TOOLCHAIN_PATH)/$(TOOLCHAIN_PREFIX)-size
 
 OBJ = $(SRC:%.c=$(BUILD_DIR)/%.o)
+COMMON_OBJ = $(COMMON_SRC:%.c=$(COMMON_OBJ_DIR)/%.o)
 
 $(BUILD_DIR)/%.o: %.c
 	@echo [CC] $(notdir $<)
 	@$(CC) $(CFLAGS) $< -c -o $@
 
-all: $(OBJ)
+$(COMMON_OBJ_DIR)/%.o: %.c 
+	@echo [CC] $(notdir $<)
+	@$(CC) $(CFLAGS) $< -c -o $@
+
+all: $(OBJ) $(COMMON_OBJ)
 	@echo [AS] $(ASRC)
-	@$(AS) -o $(ASRC:%.s=$(BUILD_DIR)/%.o) $(STARTUP)/$(ASRC)
+	@$(AS) -o $(ASRC:%.s=$(COMMON_OBJ_DIR)/%.o) $(STARTUP)/$(ASRC)
 	@echo [LD] $(TARGET).elf
-	@$(CC) -o $(BIN_DIR)/$(TARGET).elf $(LDFLAGS) $(OBJ) $(ASRC:%.s=$(BUILD_DIR)/%.o) $(LDLIBS)
+	@$(CC) -o $(BIN_DIR)/$(TARGET).elf $(LDFLAGS) $(OBJ) $(COMMON_OBJ) $(ASRC:%.s=$(COMMON_OBJ_DIR)/%.o) $(LDLIBS)
 	@echo [HEX] $(TARGET).hex
 	@$(OBJCOPY) -O ihex $(BIN_DIR)/$(TARGET).elf $(BIN_DIR)/$(TARGET).hex
 	@echo [BIN] $(TARGET).bin
@@ -125,11 +96,16 @@ all: $(OBJ)
 clean:
 	@echo [RM] OBJ
 	@rm -f $(OBJ)
-	@rm -f $(ASRC:%.s=$(BUILD_DIR)/%.o)
+	@rm -f $(ASRC:%.s=$(COMMON_OBJ_DIR)/%.o)
 	@echo [RM] BIN
 	@rm -f $(BIN_DIR)/$(TARGET).elf
 	@rm -f $(BIN_DIR)/$(TARGET).hex
 	@rm -f $(BIN_DIR)/$(TARGET).bin
-
+	@rm -r $(BIN_DIR)/$(TARGET).map
+	
+clean_common:
+	@echo [RM] COMMON_OBJ
+	@rm -f $(COMMON_OBJ_DIR)/*.o
+	
 flash:
 	@st-flash write $(BIN_DIR)/$(TARGET).bin 0x8000000
