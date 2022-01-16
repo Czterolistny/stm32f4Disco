@@ -7,9 +7,8 @@ DBG+=
 STARTUP:=$(CURDIR)/../../hardware
 LINKER_SCRIPT:=$(CURDIR)/../../Utilities/stm32_flash.ld
 
-BUILD_DIR = $(CURDIR)/build
-BIN_DIR = $(CURDIR)/binary
-COMMON_OBJ_DIR = $(CURDIR)/../build_obj
+BUILD_DIR = build
+BIN_DIR = binary
 
 # vpath is used so object files are written to the current directory instead
 # of the same directory as their source files
@@ -36,8 +35,8 @@ COMMON_SRC+=stm32f4xx_usart.c
 COMMON_SRC+=stm32f4xx_rcc.c
 COMMON_SRC+=stm32f4xx_gpio.c
 
-INCLUDE+=-I$(CURDIR)/../common
-INCLUDE+=-I$(CURDIR)/../usart
+INCLUDE+=-I$../common
+INCLUDE+=-I$../usart
 
 MCUFLAGS+=
 COMMONFLAGS+=
@@ -51,7 +50,10 @@ COMMON_OBJ = $(COMMON_SRC:%.c=$(COMMON_OBJ_DIR)/%.o)
 
 $(BUILD_DIR)/%.o: %.c
 	@echo [CC] $(notdir $<)
+	[ -d $(BUILD_DIR) ] || mkdir $(BUILD_DIR)
+	[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
 	@$(CC) $(CFLAGS) $< -c -o $@
+
 
 $(COMMON_OBJ_DIR)/%.o: %.c 
 	@echo [CC] $(notdir $<)

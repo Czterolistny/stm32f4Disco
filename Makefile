@@ -16,6 +16,8 @@ TOOLCHAIN_ROOT:=/opt/gcc-arm-none-eabi
 TOOLCHAIN_PATH:=$(TOOLCHAIN_ROOT)/bin
 TOOLCHAIN_PREFIX:=arm-none-eabi
 
+export COMMON_OBJ_DIR:=$(CURDIR)/build_obj
+
 export CC:=$(TOOLCHAIN_PATH)/$(TOOLCHAIN_PREFIX)-gcc
 export OBJCOPY:=$(TOOLCHAIN_PATH)/$(TOOLCHAIN_PREFIX)-objcopy
 export AS:=$(TOOLCHAIN_PATH)/$(TOOLCHAIN_PREFIX)-as
@@ -54,5 +56,6 @@ TARGETS=all clean
 .PHONY: $(TARGETS)
 default: all
 
-$(TARGETS): 
+$(TARGETS):
+	[ -d $(COMMON_OBJ_DIR) ] || mkdir $(COMMON_OBJ_DIR)
 	@for proj in $(PRJS) ; do $(MAKE) -C $(PRJ_PATH)/$$proj $@ ; done
