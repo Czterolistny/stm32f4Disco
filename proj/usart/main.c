@@ -48,7 +48,7 @@ int main(void)
 
 	USART2_Init();
 	
-	char testStr[] = "Uart test\r\n";
+	//char testStr[] = "Uart test\r\n";
 	//USART2_SendString(&testStr[0]);
 	initBuf();
 	USART2_DMA_Send(&DMA_TEST_BUF[0], 64);

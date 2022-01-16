@@ -199,7 +199,7 @@ int main(void) {
 	
 	uint8_t status = readID();
 	USART2_Send_Byte(status);
-	uint8_t addr[] = {0,0,0};
+	//uint8_t addr[] = {0,0,0};
 	//readPage(&addr[0], &addr[0], 3);
 	//USART2_SendNoneBlocking(&addr[0], 3);
 	

@@ -249,8 +249,8 @@ void initDCMI()
 	///////////////////////////////////////////////////////////////////////////
 	DCMI_InitTypeDef DCMI_InitStruct;
 	
-	DCMI_StructInit(&DCMI_InitStruct);https://github.com/t27/stm32f4-dcmi-jpeg/blob/master/Project/OV9655_Camera/src/main.c
-	DCMI_InitStruct.DCMI_CaptureMode = DCMI_CaptureMode_SnapShot;http://www.zhopper.narod.ru/mobile/tcm8210md_full.pdf
+	DCMI_StructInit(&DCMI_InitStruct);	//https:github.com/t27/stm32f4-dcmi-jpeg/blob/master/Project/OV9655_Camera/src/main.c
+	DCMI_InitStruct.DCMI_CaptureMode = DCMI_CaptureMode_SnapShot;	//www.zhopper.narod.ru/mobile/tcm8210md_full.pdf
 	DCMI_InitStruct.DCMI_SynchroMode = DCMI_SynchroMode_Hardware;
 	DCMI_InitStruct.DCMI_PCKPolarity = DCMI_PCKPolarity_Rising;
 	DCMI_InitStruct.DCMI_VSPolarity = DCMI_VSPolarity_High;
@@ -355,7 +355,7 @@ int main(void) {
 	
 	for(;;){
 		if( frame_received == true ){
-			USART2_SendNoneBlocking( frame_ptr, ( frame_ptr + FRAME_BUF_SIZE ) - frame_ptr);
+			USART2_SendNoneBlocking((uint8_t *) frame_ptr, ( frame_ptr + FRAME_BUF_SIZE ) - frame_ptr);
 			while(tx_complete == false);
 			tx_complete = false;
 		}
