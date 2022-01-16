@@ -59,3 +59,9 @@ default: all
 $(TARGETS):
 	[ -d $(COMMON_OBJ_DIR) ] || mkdir $(COMMON_OBJ_DIR)
 	@for proj in $(PRJS) ; do $(MAKE) -C $(PRJ_PATH)/$$proj $@ ; done
+
+$(PRJS):
+	$(MAKE) -C  $(PRJ_PATH)/$@
+
+compile: $(PRJS)
+	@echo "make" $@
