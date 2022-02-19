@@ -5,7 +5,7 @@ OPTLVL+=
 DBG+=
 
 STARTUP:=$(CURDIR)/../../hardware
-LINKER_SCRIPT:=$(CURDIR)/../../Utilities/stm32_flash.ld
+LINKER_SCRIPT:=$(CURDIR)/../../Utilities/stm32f4.ld
 
 BUILD_DIR = build
 BIN_DIR = binary

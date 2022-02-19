@@ -6,7 +6,7 @@
 #include "stm32f4xx_usart.h"
 #include "stm32f4xx_exti.h"
 #include "stm32f4xx_syscfg.h"
-#include "../common/dbg_pin.h"
+#include "../../common/dbg_pin.h"
 #include "led_disp.h"
 
 const uint8_t uart_respond[] = {0x02, 0x26, 0xff, 0xf4, 0x16, 0xf9, 0x00, 0x01, 0x16, 0xc2, 0x00, 0x00, 0x16, 0xf9, 0x00, 0x00,

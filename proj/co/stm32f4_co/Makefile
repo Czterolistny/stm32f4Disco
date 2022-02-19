@@ -1,25 +1,26 @@
-TARGET:=stm32f4_$(shell echo $(CURDIR) | sed -e "s/.*\///")
+TARGET:=$(shell echo $(CURDIR) | sed -e "s/.*\///")
 
 # Optimization level, can be [0, 1, 2, 3, s].
 OPTLVL+=
 DBG+=
 
-STARTUP:=$(CURDIR)/../../hardware
-LINKER_SCRIPT:=$(CURDIR)/../../Utilities/stm32f4.ld
+STARTUP:=$(CURDIR)/../../../hardware
+LINKER_SCRIPT:=$(CURDIR)/../../../Utilities/stm32f4.ld
 
 BUILD_DIR = build
 BIN_DIR = binary
 
 # vpath is used so object files are written to the current directory instead
 # of the same directory as their source files
-vpath %.c $(CURDIR)/../../Libraries/STM32F4xx_StdPeriph_Driver/src $(CURDIR)/../../hardware  $(CURDIR)/../common
+vpath %.c $(CURDIR)/../../../Libraries/STM32F4xx_StdPeriph_Driver/src \
+			$(CURDIR)/../../../hardware $(CURDIR)/../../common $(CURDIR)/../../usart
 
 vpath %.s $(STARTUP)
 ASRC=startup_stm32f4xx.s
 
 # Project Source Files
 SRC+=main.c
-SRC+=uart.c
+SRC+=led_disp.c
 
 # Project Source Files
 COMMON_SRC+=misc.c
@@ -28,13 +29,15 @@ COMMON_SRC+=system_stm32f4xx.c
 COMMON_SRC+=dbg_pin.c
 
 # Standard Peripheral Source Files
-COMMON_SRC+=stm32f4xx_dma.c
+COMMON_SRC+=stm32f4xx_exti.c
+COMMON_SRC+=stm32f4xx_syscfg.c
+COMMON_SRC+=stm32f4xx_tim.c
 COMMON_SRC+=stm32f4xx_usart.c
 COMMON_SRC+=stm32f4xx_rcc.c
 COMMON_SRC+=stm32f4xx_gpio.c
 
-INCLUDE+=-I../common
-INCLUDE+=-I../usart
+INCLUDE+=-I$../../common
+INCLUDE+=-I$../../usart
 
 MCUFLAGS+=
 COMMONFLAGS+=

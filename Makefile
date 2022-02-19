@@ -16,7 +16,7 @@ TOOLCHAIN_ROOT:=/opt/gcc-arm-none-eabi
 TOOLCHAIN_PATH:=$(TOOLCHAIN_ROOT)/bin
 TOOLCHAIN_PREFIX:=arm-none-eabi
 
-export COMMON_OBJ_DIR:=$(CURDIR)/build_obj
+export COMMON_OBJ_DIR:=$(CURDIR)/$(PRJ_PATH)/build_obj
 
 export CC:=$(TOOLCHAIN_PATH)/$(TOOLCHAIN_PREFIX)-gcc
 export OBJCOPY:=$(TOOLCHAIN_PATH)/$(TOOLCHAIN_PREFIX)-objcopy
@@ -27,7 +27,7 @@ export SIZE:=$(TOOLCHAIN_PATH)/$(TOOLCHAIN_PREFIX)-size
 export OPTLVL:=0
 export DBG:=-g
 
-export INCLUDE:=
+#export INCLUDE:=
 INCLUDE=-I$(CURDIR)/hardware
 INCLUDE+=-I$(CURDIR)/Libraries/CMSIS/Device/ST/STM32F4xx/Include
 INCLUDE+=-I$(CURDIR)/Libraries/CMSIS/Include

@@ -1,44 +1,56 @@
-TARGET:=stm32f4_$(shell echo $(CURDIR) | sed -e "s/.*\///")
+TARGET:=$(shell echo $(CURDIR) | sed -e "s/.*\///")
 
 # Optimization level, can be [0, 1, 2, 3, s].
 OPTLVL+=
 DBG+=
 
-STARTUP:=$(CURDIR)/../../hardware
-LINKER_SCRIPT:=$(CURDIR)/../../Utilities/stm32f4.ld
+STARTUP:=$(CURDIR)/../../../hardware
+LINKER_SCRIPT:=$(CURDIR)/../../../Utilities/stm32f030.ld
 
 BUILD_DIR = build
 BIN_DIR = binary
 
 # vpath is used so object files are written to the current directory instead
 # of the same directory as their source files
-vpath %.c $(CURDIR)/../../Libraries/STM32F4xx_StdPeriph_Driver/src $(CURDIR)/../../hardware  $(CURDIR)/../common
+vpath %.c $(CURDIR)/../../../Libraries/STM32F0xx_StdPeriph_Driver/src \
+			$(CURDIR)/../../../hardware $(CURDIR)/../../common
 
 vpath %.s $(STARTUP)
-ASRC=startup_stm32f4xx.s
+ASRC=startup_stm32f030.s
 
 # Project Source Files
 SRC+=main.c
-SRC+=uart.c
 
 # Project Source Files
 COMMON_SRC+=misc.c
-COMMON_SRC+=stm32f4xx_it.c
-COMMON_SRC+=system_stm32f4xx.c
-COMMON_SRC+=dbg_pin.c
+COMMON_SRC+=stm32f0xx_it.c
+COMMON_SRC+=system_stm32f0xx.c
 
 # Standard Peripheral Source Files
-COMMON_SRC+=stm32f4xx_dma.c
-COMMON_SRC+=stm32f4xx_usart.c
-COMMON_SRC+=stm32f4xx_rcc.c
-COMMON_SRC+=stm32f4xx_gpio.c
+COMMON_SRC+=stm32f0xx_exti.c
+COMMON_SRC+=stm32f0xx_syscfg.c
+COMMON_SRC+=stm32f0xx_tim.c
+COMMON_SRC+=stm32f0xx_usart.c
+COMMON_SRC+=stm32f0xx_rcc.c
+COMMON_SRC+=stm32f0xx_gpio.c
 
-INCLUDE+=-I../common
-INCLUDE+=-I../usart
+# Standard Peripheral Header Files
+INCLUDE+=-I$(CURDIR)/../../../Libraries/CMSIS/Device/ST/STM32F0xx/Include
+INCLUDE+=-I$(CURDIR)/../../../Libraries/STM32F0xx_StdPeriph_Driver/inc
+
+INCLUDE+=-I$../../common
+INCLUDE+=-I$../../usart
+
+CDEFS=-DUSE_STDPERIPH_DRIVER
+CDEFS+=-DSTM32F0XX
+CDEFS+=-DSTM32F030xC
+CDEFS+=-DHSE_VALUE=8000000
+CDEFS+=-D__FPU_PRESENT=1
+CDEFS+=-D__FPU_USED=0
 
 MCUFLAGS+=
 COMMONFLAGS+=
-CFLAGS+=
+CFLAGS+= $(INCLUDE) $(CDEFS)
 
 LDLIBS+=
 LDFLAGS=$(MCUFLAGS) -u _scanf_float -u _printf_float -fno-exceptions -Wl,--gc-sections,-T$(LINKER_SCRIPT),-Map,$(BIN_DIR)/$(TARGET).map
