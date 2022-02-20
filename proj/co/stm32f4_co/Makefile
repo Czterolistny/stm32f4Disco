@@ -21,6 +21,7 @@ ASRC=startup_stm32f4xx.s
 # Project Source Files
 SRC+=main.c
 SRC+=led_disp.c
+SRC+=esp.c
 
 # Project Source Files
 COMMON_SRC+=misc.c
