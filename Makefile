@@ -63,5 +63,13 @@ $(TARGETS):
 $(PRJS):
 	$(MAKE) -C  $(PRJ_PATH)/$@
 
+clean_common:
+	@echo [RM] COMMON_OBJ
+	@rm -f $(COMMON_OBJ_DIR)/*.o
+
+clean_all:
+	@for proj in $(PRJS) ; do $(MAKE) -C $(PRJ_PATH)/$$proj clean ; done
+	$(MAKE) clean_common
+
 compile: $(PRJS)
 	@echo "make" $@
