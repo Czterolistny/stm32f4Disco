@@ -65,6 +65,20 @@ $(TARGETS):
 $(PRJS):
 	$(MAKE) -C  $(PRJ_PATH)/$@
 
+substr = $(word $2,$(subst ., ,$1))
+
+%.clean:
+	@echo $@
+	$(MAKE) -C $(PRJ_PATH)/$(call substr,$*,1)/$(call substr,$*,2) clean
+	
+%.flash:
+	@echo $@
+	$(MAKE) -C $(PRJ_PATH)/$(call substr,$*,1)/$(call substr,$*,2) flash
+	
+%.compile:
+	@echo $@
+	$(MAKE) -C $(PRJ_PATH)/$(call substr,$*,1)/$(call substr,$*,2)
+
 clean_common:
 	@echo [RM] COMMON_OBJ
 	@rm -f $(COMMON_OBJ_DIR)/*.o
