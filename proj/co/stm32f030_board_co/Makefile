@@ -13,7 +13,8 @@ BIN_DIR = binary
 # vpath is used so object files are written to the current directory instead
 # of the same directory as their source files
 vpath %.c $(CURDIR)/../../../Libraries/STM32F0xx_StdPeriph_Driver/src \
-			$(CURDIR)/../../../hardware $(CURDIR)/../../common $(CURDIR)/src
+			$(CURDIR)/../../../hardware $(CURDIR)/../../common $(CURDIR)/src \
+			$(CURDIR)/../stm32f4_co
 
 vpath %.s $(STARTUP)
 ASRC=startup_stm32f030.s
@@ -22,6 +23,7 @@ ASRC=startup_stm32f030.s
 SRC+=main.c
 SRC+=sregs.c
 SRC+=debugPins.c
+SRC+=esp.c
 
 # Project Source Files
 COMMON_SRC+=stm32f0xx_it.c
@@ -42,6 +44,7 @@ INCLUDE+=-I$(CURDIR)/../../../Libraries/STM32F0xx_StdPeriph_Driver/inc
 INCLUDE+=-Iinc/
 INCLUDE+=-I$../../common
 INCLUDE+=-I$../../usart
+INCLUDE+=-I../stm32f4_co
 
 HSE_CLK=-DHSE_VALUE=12000000
 CPU_CORE=-mcpu=cortex-m0
