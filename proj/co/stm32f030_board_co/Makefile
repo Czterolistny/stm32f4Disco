@@ -23,7 +23,6 @@ ASRC=startup_stm32f030.s
 SRC+=main.c
 SRC+=sregs.c
 SRC+=debugPins.c
-SRC+=esp.c
 
 # Project Source Files
 COMMON_SRC+=stm32f0xx_it.c
@@ -47,16 +46,21 @@ INCLUDE+=-I$../../usart
 INCLUDE+=-I../stm32f4_co
 
 HSE_CLK=-DHSE_VALUE=12000000
-CPU_CORE=-mcpu=cortex-m0
+CPU_CORE=cortex-m0
+
+CFLAGS:=$(CFLAGS:cortex-m4=$(CPU_CORE))
+MCUFLAGS:=$(MCUFLAGS:cortex-m4=$(CPU_CORE))
+
+CFLAGS:=$(CFLAGS:8000000=12000000)
 
 CDEFS=-DUSE_STDPERIPH_DRIVER
 CDEFS+=-DSTM32F0XX
 CDEFS+=-DSTM32F030xC
 CDEFS+=-D__FPU_PRESENT=1
 CDEFS+=-D__FPU_USED=0
-CDEFS+=$(HSE_CLK)
+CDEFS+=
 
-MCUFLAGS+=$(CPU_CORE)
+MCUFLAGS+=
 COMMONFLAGS+=
 CFLAGS+= $(INCLUDE) $(CDEFS)
 
@@ -102,3 +106,4 @@ clean_common:
 	
 flash:
 	@st-flash write $(BIN_DIR)/$(TARGET).bin 0x8000000
+	@st-flash reset

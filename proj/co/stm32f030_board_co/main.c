@@ -6,7 +6,7 @@
 #include "stm32f0xx_tim.h"
 #include "sregs.h"
 #include "debugPins.h"
-#include "esp.h"
+//#include "esp.h"
 
 #define FAN_PERC_ADDR 	((uint8_t) 0x3F)
 #define SET_TEMP_ADDR 	((uint8_t) 0x23)
@@ -23,7 +23,7 @@ const uint8_t uart_respond[] = {0x02, 0x26, 0xff, 0xf4, 0x16, 0xf9, 0x00, 0x01, 
 uint8_t *pTX_BUF = NULL;
 uint8_t rx_buf[128];
 
-volatile int8_t delay_5ms_ticks = -1;
+volatile int8_t delay_5ms_count = -1;
 volatile uint8_t frame_byte_rec;
 volatile uint8_t tx_cnt;
 
@@ -38,29 +38,30 @@ void USART1_IRQHandler(void)
     {
 		USART_ClearFlag(USART1, USART_IT_RXNE);
 		rx_buf[frame_byte_rec++] = (uint8_t) USART_ReceiveData(USART1);
-		delay_5ms_ticks = 0;
+		delay_5ms_count = 0;
 		
     }else if(USART_GetITStatus(USART1, USART_IT_TXE) != RESET)
     {
 		static uint8_t txed_cnt;
-		if(txed_cnt == tx_cnt){
+		if(txed_cnt != tx_cnt)
+		{
+			USART_SendData(USART1, pTX_BUF[++txed_cnt]);
+		}else {
 			USART_ITConfig(USART1, USART_IT_TXE, DISABLE);
 			txed_cnt = 0;
 			tx_cnt = 0;
-		}else {
-			USART_SendData(USART1, pTX_BUF[++txed_cnt]);
 		}
     }
 }
 
-void TIM2_IRQHandler()
+void TIM3_IRQHandler()
 {
-    if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
+    if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)
     {
-		if( delay_5ms_ticks >= 0 ){
-			delay_5ms_ticks++;
+		if( delay_5ms_count >= 0 ){
+			delay_5ms_count++;
 		}
-		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+		TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
     }
 }
 
@@ -98,14 +99,14 @@ void processData(uint8_t *recv_buf, uint8_t recv_len)
 {
 	if( recv_len > 0x20 )
 	{
-		sendToESP(recv_buf, recv_len);
+		//sendToESP(recv_buf, recv_len);
 	}	
 	uartSendToCO((uint8_t *) &uart_respond[0], sizeof(uart_respond));
 }
 
-void TIM2_Init()
+void TIM3_Init()
 {
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 
 	//10ms
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
@@ -114,16 +115,16 @@ void TIM2_Init()
     TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
     TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
 
-    TIM_TimeBaseInit(TIM2, &TIM_TimeBaseInitStruct);
+    TIM_TimeBaseInit(TIM3, &TIM_TimeBaseInitStruct);
 
     NVIC_InitTypeDef NVIC_InitStruct;
-    NVIC_InitStruct.NVIC_IRQChannel = TIM2_IRQn;
+    NVIC_InitStruct.NVIC_IRQChannel = TIM3_IRQn;
     NVIC_InitStruct.NVIC_IRQChannelPriority = 0;
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
 	
-	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
-    TIM_Cmd(TIM2, ENABLE);
+	TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
+    TIM_Cmd(TIM3, ENABLE);
 }
 
 void InitUsart1(void)
@@ -158,12 +159,12 @@ void InitUsart1(void)
 	NVIC_InitTypeDef NVIC_InitStruct;
 
     NVIC_InitStruct.NVIC_IRQChannel = USART1_IRQn;
-    NVIC_InitStruct.NVIC_IRQChannelCmd = DISABLE;
+    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_InitStruct.NVIC_IRQChannelPriority = 0;
 
     NVIC_Init(&NVIC_InitStruct);
 
-	USART_ITConfig(USART1, USART_IT_RXNE, DISABLE);
+	USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
 	USART_ITConfig(USART1, USART_IT_TXE, DISABLE);
 }
 
@@ -184,15 +185,16 @@ int main()
 {
 	SystemInit();
     SysTick_Config(SystemCoreClock / 1000);
+
 	initTestPin();
-	
+
 	InitUsart1();
-	TIM2_Init();
+	TIM3_Init();
 	//sregsInit();
-	
+
 	for (;;){
-		while( delay_5ms_ticks < 10 );
-		delay_5ms_ticks= -1;
+		while( delay_5ms_count < 10 );
+		delay_5ms_count= -1;
 		processData(&rx_buf[0], frame_byte_rec);
 		frame_byte_rec = 0;
 	};
