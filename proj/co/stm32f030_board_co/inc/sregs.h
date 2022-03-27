@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 /* Sregs default output states - set after sregsInit() */
-#define SREGS_ESP_UART_DEFAULT_STATE        ((bool) 1u)
+#define SREGS_ESP_UART_EN_DEFAULT_STATE     ((bool) 1u)
 #define SREGS_ESP_DTR_RTS_EN_DEFAULT_STATE  ((bool) 0u)
 #define SREGS_UART_BOOT_EN_DEFAULT_STATE    ((bool) 0u)
 #define SREGS_ESP_SW_UART_EN_DEFAULT_STATE  ((bool) 0u)

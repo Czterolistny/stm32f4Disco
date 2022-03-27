@@ -170,6 +170,7 @@ void delay_ms(uint32_t ms)
 void SysTick_Handler()
 {
 	msTicks++;
+	//sregRefresh((uint16_t) msTicks);
 }
 
 int main()
@@ -181,7 +182,7 @@ int main()
 
 	InitUsart1();
 	TIM3_Init();
-	//sregsInit();
+	sregsInit();
 
 	for (;;){
 		if( new_frame_recived == true )
