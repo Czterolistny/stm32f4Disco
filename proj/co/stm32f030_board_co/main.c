@@ -18,13 +18,14 @@
 
 const uint8_t param[] = {FAN_PERC_ADDR, SET_TEMP_ADDR, TEMP1_ADDR, TEMP2_ADDR, EXH_TEMP_ADDR};
 
-const uint8_t uart_respond[] = {0x02, 0x26, 0xff, 0xf4, 0x16, 0xf9, 0x00, 0x01, 0x16, 0xc2, 0x00, 0x00, 0x16, 0xf9, 0x00, 0x00,
+static const uint8_t uart_respond[] = {0x02, 0x26, 0xff, 0xf4, 0x16, 0xf9, 0x00, 0x01, 0x16, 0xc2, 0x00, 0x00, 0x16, 0xf9, 0x00, 0x00,
 								0x16, 0xf9, 0x00, 0x02, 0x16, 0xc2, 0x00, 0x00, 0x16, 0xf9, 0x00, 0x00, 0x02, 0x18, 0x2c, 0x11};
-uint8_t *pTX_BUF = NULL;
-uint8_t rx_buf[128];
 
-volatile int8_t delay_5ms_count = -1;
-volatile uint8_t frame_byte_rec;
+volatile static uint8_t *ptx_buf = NULL;
+volatile static uint8_t rx_buf[128];
+
+volatile bool new_frame_recived = false;
+volatile uint8_t rx_cnt;
 volatile uint8_t tx_cnt;
 
 volatile uint32_t msTicks;
@@ -37,15 +38,20 @@ void USART1_IRQHandler(void)
     if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
     {
 		USART_ClearFlag(USART1, USART_IT_RXNE);
-		rx_buf[frame_byte_rec++] = (uint8_t) USART_ReceiveData(USART1);
-		delay_5ms_count = 0;
-		
+		rx_buf[rx_cnt++] = (uint8_t) USART_ReceiveData(USART1);
+
+		TIM_SetCounter(TIM3, (uint32_t) 0);
+		if( TIM_GetITStatus(TIM3, TIM_IT_Update) == RESET )
+		{
+			TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
+		}
+
     }else if(USART_GetITStatus(USART1, USART_IT_TXE) != RESET)
     {
 		static uint8_t txed_cnt;
 		if(txed_cnt != tx_cnt)
 		{
-			USART_SendData(USART1, pTX_BUF[++txed_cnt]);
+			USART_SendData(USART1, ptx_buf[txed_cnt++]);
 		}else {
 			USART_ITConfig(USART1, USART_IT_TXE, DISABLE);
 			txed_cnt = 0;
@@ -58,31 +64,16 @@ void TIM3_IRQHandler()
 {
     if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)
     {
-		if( delay_5ms_count >= 0 ){
-			delay_5ms_count++;
-		}
+		new_frame_recived = true;
+		TIM_ITConfig(TIM3, TIM_IT_Update, DISABLE);
 		TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
     }
 }
 
-void testUart1(void)
+static void uartSendToCO(volatile uint8_t *tx_buf, uint8_t len)
 {
-	const uint8_t sendBuf[] = "test to send\n";
-	for(;;)
-	{
-		clearTestPin();
-		uartSend((uint8_t*) &sendBuf[0], sizeof(sendBuf)/sizeof(sendBuf[0]));
-		delay_ms(150);
-		setTestPin();
-		delay_ms(150);
-	}
-}
-
-static void uartSendToCO(uint8_t *tx_buf, uint8_t len)
-{
-	pTX_BUF = tx_buf;
-	USART_SendData(USART1, tx_buf[0]);
-	tx_cnt = len - 1;
+	ptx_buf = tx_buf;
+	tx_cnt = len;
 	USART_ITConfig(USART1, USART_IT_TXE, ENABLE);
 }
 
@@ -95,7 +86,7 @@ static void uartSend(uint8_t *tx_buf, uint8_t len)
 	}
 }
 
-void processData(uint8_t *recv_buf, uint8_t recv_len)
+static void processData(volatile uint8_t *recv_buf, uint8_t recv_len)
 {
 	if( recv_len > 0x20 )
 	{
@@ -104,14 +95,14 @@ void processData(uint8_t *recv_buf, uint8_t recv_len)
 	uartSendToCO((uint8_t *) &uart_respond[0], sizeof(uart_respond));
 }
 
-void TIM3_Init()
+static void TIM3_Init()
 {
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 
 	//10ms
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
     TIM_TimeBaseInitStruct.TIM_Prescaler = 999;
-    TIM_TimeBaseInitStruct.TIM_Period = 419;
+    TIM_TimeBaseInitStruct.TIM_Period = 4199;
     TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
     TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
 
@@ -123,11 +114,11 @@ void TIM3_Init()
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
 	
-	TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
+	TIM_ITConfig(TIM3, TIM_IT_Update, DISABLE);
     TIM_Cmd(TIM3, ENABLE);
 }
 
-void InitUsart1(void)
+static void InitUsart1(void)
 {
 	GPIO_InitTypeDef GPIO_InitStruct;
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
@@ -193,9 +184,11 @@ int main()
 	//sregsInit();
 
 	for (;;){
-		while( delay_5ms_count < 10 );
-		delay_5ms_count= -1;
-		processData(&rx_buf[0], frame_byte_rec);
-		frame_byte_rec = 0;
+		if( new_frame_recived == true )
+		{
+			processData(&rx_buf[0], rx_cnt);
+			rx_cnt = 0;
+			new_frame_recived = false;
+		}
 	};
 }
