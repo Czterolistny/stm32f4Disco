@@ -1,11 +1,13 @@
-#include "stm32f0xx.h"
-#include "stm32f0xx_gpio.h"
-#include "stm32f0xx_usart.h"
-#include "stm32f0xx_rcc.h"
-#include "stm32f0xx_misc.h"
-#include "stm32f0xx_tim.h"
+#include <stm32f0xx.h>
+#include <stm32f0xx_gpio.h>
+#include <stm32f0xx_usart.h>
+#include <stm32f0xx_rcc.h>
+#include <stm32f0xx_misc.h>
+#include <stm32f0xx_tim.h>
+#include <stm32f0xx_syscfg.h>
 #include "sregs.h"
 #include "debugPins.h"
+#include "swuart.h"
 //#include "esp.h"
 
 #define FAN_PERC_ADDR 	((uint8_t) 0x3F)
@@ -31,7 +33,34 @@ volatile uint8_t tx_cnt;
 volatile uint32_t msTicks;
 
 void delay_ms(uint32_t ms);
+#if(0)
 static void uartSend(uint8_t *tx_buf, uint8_t len);
+#endif
+
+volatile uint8_t swuartBuf[32];
+volatile uint8_t swuartRxCnt;
+static void swuartRxByteComplete(uint8_t rxByte, uint8_t rxByteNmb)
+{
+	swuartBuf[swuartRxCnt++] = rxByte;
+}
+static void swuartTxComplete(uint16_t txByteNmb)
+{
+
+}
+static void swuartRxComplete(uint8_t rxByteNmb)
+{
+	swuartSend((uint8_t *)&swuartBuf[0], swuartRxCnt);
+	swuartRxCnt = 0;
+}
+
+void swuartTest(void)
+{
+	const uint8_t buf[] = "helloSW_Uart\n";
+	swuartInit();
+	swuartInitClb(&swuartTxComplete, &swuartRxByteComplete, &swuartRxComplete);
+	swuartSend((uint8_t *)&buf[0], sizeof(buf)/sizeof(buf[0]));
+	for(;;);
+}
 
 void USART1_IRQHandler(void)
 {
@@ -77,6 +106,7 @@ static void uartSendToCO(volatile uint8_t *tx_buf, uint8_t len)
 	USART_ITConfig(USART1, USART_IT_TXE, ENABLE);
 }
 
+#if(0)
 static void uartSend(uint8_t *tx_buf, uint8_t len)
 {
 	for(uint8_t i = 0; i < len; ++i)
@@ -85,21 +115,22 @@ static void uartSend(uint8_t *tx_buf, uint8_t len)
 		USART_SendData(USART1, tx_buf[i]);
 	}
 }
+#endif
 
 static void processData(volatile uint8_t *recv_buf, uint8_t recv_len)
 {
 	if( recv_len > 0x20 )
 	{
-		//sendToESP(recv_buf, recv_len);
+		//sendToESP((uint8_t*) recv_buf, recv_len);
 	}	
 	uartSendToCO((uint8_t *) &uart_respond[0], sizeof(uart_respond));
 }
 
 static void TIM3_Init()
 {
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+    RCC_APB1PeriphClockCmd(RCC_APB1ENR_TIM3EN, ENABLE);
 
-	//10ms
+	/* 100ms Timer */
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
     TIM_TimeBaseInitStruct.TIM_Prescaler = 999;
     TIM_TimeBaseInitStruct.TIM_Period = 4199;
@@ -146,7 +177,6 @@ static void InitUsart1(void)
 	USART_Init(USART1, &USART_InitStruct);
 	USART_Cmd(USART1, ENABLE);
 	
-	//NVIC
 	NVIC_InitTypeDef NVIC_InitStruct;
 
     NVIC_InitStruct.NVIC_IRQChannel = USART1_IRQn;
@@ -170,7 +200,6 @@ void delay_ms(uint32_t ms)
 void SysTick_Handler()
 {
 	msTicks++;
-	//sregRefresh((uint16_t) msTicks);
 }
 
 int main()
@@ -180,8 +209,12 @@ int main()
 
 	initTestPin();
 
+	/* SW uart test - never return function */
+	swuartTest();
+
 	InitUsart1();
 	TIM3_Init();
+
 	sregsInit();
 
 	for (;;){
