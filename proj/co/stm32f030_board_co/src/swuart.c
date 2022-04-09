@@ -27,11 +27,12 @@
 #define swuartReadtxLine()  GPIO_ReadInputDataBit(GPIOB, swuartRxPin)
 #define swuartIsTxMode()    (0u != swuartTxLen)
 
+#define swuartTimerPresc          (4u)
+#define swuartBitPeriodTimVal     (250u)
+#define swuartHalfBitPeriodTimVal (swuartBitPeriodTimVal / 2u)
 #define swuartTxBufSize           (32u)
 #define swuartMaxBitInByteShift   (7u)
 #define swuartBitInFrame          (10u)
-#define swuartBitPeriodTimVal     (50u)
-#define swuartHalfBitPeriodTimVal (25u)
 #define swuartStartBitIdx         (0u)
 
 volatile static uint8_t swuartTxBuf[swuartTxBufSize];
@@ -49,6 +50,7 @@ static inline void swuartInitRxAction(void);
 static inline void swuartPostRxAction(void);
 
 swuartTxCompleteCallb swuartTxComplete = NULL;
+swuartRxByteCompleteCallb swuartRxByteComplete = NULL;
 swuartRxCompleteCallb swuartRxComplete = NULL;
 
 typedef union
@@ -101,13 +103,22 @@ void swuartInitRxAction(void)
 
 void swuartPostRxAction(void)
 {
-    TIM_Cmd(swuartTimer, DISABLE);
     EXTI_ClearITPendingBit(swuartEXTLine);
     NVIC_EnableIRQ(swuartEXTSource);
 
+    if( NULL != swuartRxByteComplete )
+    {
+        swuartRxByteComplete(swuartFrame.data, 0u);
+    }
+}
+
+void swuartRxIdleAction(void)
+{
+    TIM_Cmd(swuartTimer, DISABLE);
+    TIM_SetCounter(swuartTimer, (uint32_t) 0u);
     if( NULL != swuartRxComplete )
     {
-        swuartRxComplete(swuartFrame.data, 0u);
+        swuartRxComplete(0u);
     }
 }
 
@@ -130,17 +141,21 @@ void TIM14_IRQHandler()
                 }
             }else
             {
+                swuartTxByteIdx = 0;
                 swuartPostTxAction();
             }
         }else
         {
             swuartFrame.frame |= (uint16_t)( swuartReadtxLine() << swuartBitInFrameIdx );
-
+            
             if( (swuartBitInFrame - 1u) == swuartBitInFrameIdx )
             {
-                swuartBitInFrameIdx = 0u;
+                swuartBitInFrameIdx++;
                 swuartPostRxAction();
-
+            }else if( swuartBitInFrame == swuartBitInFrameIdx )
+            {
+                swuartBitInFrameIdx = 0u;
+                swuartRxIdleAction();
             }else{
                 swuartBitInFrameIdx++;
             }
@@ -163,7 +178,7 @@ static void swuartTimerInit(void)
 
 	/* 1/(9600) Timer */
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
-    TIM_TimeBaseInitStruct.TIM_Prescaler = 99;
+    TIM_TimeBaseInitStruct.TIM_Prescaler = swuartTimerPresc;
     TIM_TimeBaseInitStruct.TIM_Period = (swuartBitPeriodTimVal - 1);
     TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
     TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
@@ -240,8 +255,10 @@ void swuartInit(void)
     swuartTimerInit();
 }
 
-void swuartInitClb(swuartTxCompleteCallb txClb, swuartRxCompleteCallb rxClb)
+void swuartInitClb(swuartTxCompleteCallb txClb, swuartRxByteCompleteCallb rxByteClb,
+            swuartRxCompleteCallb rxClb)
 {
     swuartTxComplete = txClb;
+    swuartRxByteComplete = rxByteClb;
     swuartRxComplete = rxClb;
 }
