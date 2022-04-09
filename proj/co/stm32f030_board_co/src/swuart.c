@@ -27,6 +27,10 @@
 #define swuartReadtxLine()  GPIO_ReadInputDataBit(GPIOB, swuartRxPin)
 #define swuartIsTxMode()    (0u != swuartTxLen)
 
+#define swuartTimerPresc          (4u)
+#define swuartBitPeriodTimVal     (125u)
+#define swuartPeriodCorrection    (swuartTimerPresc * 15u)
+#define swuartHalfBitPeriodTimVal ((swuartBitPeriodTimVal / 2u) + swuartPeriodCorrection)
 #define swuartTxBufSize           (32u)
 #define swuartMaxBitInByteShift   (7u)
 #define swuartBitInFrame          (10u)
@@ -47,6 +51,7 @@ static inline void swuartPostTxAction(void);
 static inline void swuartInitTxAction(void);
 static inline void swuartInitRxAction(void);
 static inline void swuartPostRxAction(void);
+static inline void swuartRxIdleAction(void);
 
 swuartTxCompleteCallb swuartTxComplete = NULL;
 swuartRxCompleteCallb swuartRxComplete = NULL;
@@ -92,11 +97,11 @@ void swuartPostTxAction(void)
 
 void swuartInitRxAction(void)
 {
+    TIM_SetCounter(swuartTimer, (uint32_t) swuartHalfBitPeriodTimVal);
+	TIM_Cmd(swuartTimer, ENABLE);
     NVIC_DisableIRQ(swuartEXTSource);
     swuartFrame.frame = 0u;
     swuartBitInFrameIdx = 0u;
-    TIM_SetCounter(swuartTimer, (uint32_t) swuartHalfBitPeriodTimVal);
-	TIM_Cmd(swuartTimer, ENABLE);
 }
 
 void swuartPostRxAction(void)
@@ -135,7 +140,6 @@ void TIM14_IRQHandler()
         }else
         {
             swuartFrame.frame |= (uint16_t)( swuartReadtxLine() << swuartBitInFrameIdx );
-
             if( (swuartBitInFrame - 1u) == swuartBitInFrameIdx )
             {
                 swuartBitInFrameIdx = 0u;
@@ -161,7 +165,7 @@ static void swuartTimerInit(void)
 {
     RCC_APB1PeriphClockCmd(RCC_APB1ENR_TIM14EN, ENABLE);
 
-	/* 1/(9600) Timer */
+	/* 1/(115200) Timer */
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
     TIM_TimeBaseInitStruct.TIM_Prescaler = 99;
     TIM_TimeBaseInitStruct.TIM_Period = (swuartBitPeriodTimVal - 1);
