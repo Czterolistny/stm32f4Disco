@@ -8,7 +8,7 @@
 #include "sregs.h"
 #include "debugPins.h"
 #include "swuart.h"
-//#include "esp.h"
+#include "esp.h"
 
 #define FAN_PERC_ADDR 	((uint8_t) 0x3F)
 #define SET_TEMP_ADDR 	((uint8_t) 0x23)
@@ -39,13 +39,27 @@ static void uartSend(uint8_t *tx_buf, uint8_t len);
 
 volatile uint8_t swuartBuf[32];
 volatile uint8_t swuartRxCnt;
-static void swuartRxComplete(uint8_t rxByte, uint16_t rxByteNmb)
+static void swuartRxByteComplete(uint8_t rxByte, uint8_t rxByteNmb)
 {
 	swuartBuf[swuartRxCnt++] = rxByte;
 }
 static void swuartTxComplete(uint16_t txByteNmb)
 {
 
+}
+static void swuartRxComplete(uint8_t rxByteNmb)
+{
+	swuartSend((uint8_t *)&swuartBuf[0], swuartRxCnt);
+	swuartRxCnt = 0;
+}
+
+void swuartTest(void)
+{
+	const uint8_t buf[] = "helloSW_Uart\n";
+	swuartInit();
+	swuartInitClb(&swuartTxComplete, &swuartRxByteComplete, &swuartRxComplete);
+	swuartSend((uint8_t *)&buf[0], sizeof(buf)/sizeof(buf[0]));
+	for(;;);
 }
 
 void USART1_IRQHandler(void)
@@ -107,7 +121,7 @@ static void processData(volatile uint8_t *recv_buf, uint8_t recv_len)
 {
 	if( recv_len > 0x20 )
 	{
-		//sendToESP(recv_buf, recv_len);
+		sendToESP((uint8_t*) recv_buf, recv_len);
 	}	
 	uartSendToCO((uint8_t *) &uart_respond[0], sizeof(uart_respond));
 }
@@ -163,7 +177,6 @@ static void InitUsart1(void)
 	USART_Init(USART1, &USART_InitStruct);
 	USART_Cmd(USART1, ENABLE);
 	
-	//NVIC
 	NVIC_InitTypeDef NVIC_InitStruct;
 
     NVIC_InitStruct.NVIC_IRQChannel = USART1_IRQn;
@@ -189,7 +202,6 @@ void SysTick_Handler()
 	msTicks++;
 }
 
-const uint8_t buf[] = "hellosdf\n";
 int main()
 {
 	SystemInit();
@@ -197,10 +209,8 @@ int main()
 
 	initTestPin();
 
-	/* SW uart test */
-	swuartInit();
-	swuartInitClb(&swuartTxComplete, &swuartRxComplete);
-	swuartSend((uint8_t *)&buf[0], sizeof(buf)/sizeof(buf[0]));
+	/* SW uart test - never return function */
+	swuartTest();
 
 	InitUsart1();
 	TIM3_Init();

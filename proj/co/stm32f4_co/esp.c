@@ -1,5 +1,10 @@
 #include <stdio.h>
-#include "stm32f4xx_usart.h"
+#if defined STM32F4XX
+	#include "stm32f4xx_usart.h"
+#elif defined STM32F0XX
+	#include "stm32f0xx_usart.h"
+#endif
+#include <stdint.h>
 #include "main.h"
 
 #define CRC_INIT 0xB169

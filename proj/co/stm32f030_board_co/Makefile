@@ -24,6 +24,7 @@ SRC+=main.c
 SRC+=sregs.c
 SRC+=debugPins.c
 SRC+=swuart.c
+SRC+=esp.c
 
 # Project Source Files
 COMMON_SRC+=stm32f0xx_it.c
