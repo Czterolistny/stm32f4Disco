@@ -217,7 +217,7 @@ int main()
 	initTestPin();
 
 	/* SW uart test - never return function */
-	swuartTest();
+	//swuartTest();
 
 	InitUsart1();
 	TIM3_Init();
