@@ -6,6 +6,7 @@
 #endif
 #include <stdint.h>
 #include "main.h"
+#include "esp.h"
 
 #define CRC_INIT 0xB169
 
@@ -17,22 +18,26 @@ const uint8_t estabUDPInitcmd[] = {'A', 'T', '+', 'C', 'I', 'P', 'S', 'T', 'A', 
 static uint16_t crc16calc(char *buf, uint16_t crc, uint16_t len);
 static uint8_t uint_to_string(char *s, uint16_t x);
 static uint8_t _strlen(char *s);
+inline static void sendATcmd(char *cmd, uint8_t len);
 
-void initESP(void)
+espConfig *config;
+
+void espInit(espConfig *conf)
 {
-	for(uint8_t i = 0; i < sizeof(estabUDPInitcmd); ++i){
-		while (USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
-		USART_SendData(USART3, estabUDPInitcmd[i]);
-	}
+	if( (NULL != conf) && (NULL != conf->espWriteATCommand) )
+	{
+		config = conf;
+	}else
+		return;
+
+	config->espWriteATCommand((uint8_t *) &estabUDPInitcmd[0], sizeof(estabUDPInitcmd)/sizeof(estabUDPInitcmd[0]));
+
 	delay_ms(1);
 }
 
-void sendATcmd(char *cmd, uint8_t len)
+static void sendATcmd(char *cmd, uint8_t len)
 {
-	for(uint8_t i = 0; i < len; ++i){
-		while (USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
-		USART_SendData(USART3, cmd[i]);
-	}
+	config->espWriteATCommand((uint8_t*) cmd, len);
 }
 
 void sendToESP(uint8_t *recv_buf, uint8_t recv_len)

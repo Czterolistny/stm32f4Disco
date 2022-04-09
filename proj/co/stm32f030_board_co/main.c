@@ -202,6 +202,13 @@ void SysTick_Handler()
 	msTicks++;
 }
 
+void initESP(void)
+{
+	espConfig esp_conf;
+	esp_conf.espWriteATCommand = &swuartSend;
+	espInit(&esp_conf);
+}
+
 int main()
 {
 	SystemInit();
@@ -216,6 +223,7 @@ int main()
 	TIM3_Init();
 
 	sregsInit();
+	initESP();
 
 	for (;;){
 		if( new_frame_recived == true )

@@ -366,6 +366,21 @@ void initDispPins(void)
     GPIO_Init(GPIOB, &GPIO_InitStruct);
 }
 
+void sendUART3(uint8_t *cmd, uint8_t nmbBytes)
+{
+	for(uint8_t i = 0; i < nmbBytes; ++i){
+	        while (USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
+	        USART_SendData(USART3, cmd[i]);
+	}
+}
+
+void initESP(void)
+{
+	espConfig esp_conf;
+	esp_conf.espWriteATCommand = &sendUART3;
+	espInit(&esp_conf);
+}
+
 int main(void) {
   
 	SystemInit();
