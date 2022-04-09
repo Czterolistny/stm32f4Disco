@@ -14,17 +14,18 @@
 #define SWUART_USE_PARITY_BITS  (false)
 
 #define swuartEXTSource EXTI4_15_IRQn
-#define swuartEXTLine   EXTI_Line7
+#define swuartEXTLine   EXTI_Line11
 #define swuartTimer     TIM14
-#define swuartTxPin     GPIO_Pin_6
-#define swuartRxPin     GPIO_Pin_7
+#define swuartTxPin     GPIO_Pin_4
+#define swuartRxPin     GPIO_Pin_11
+#define swuartGPIO      GPIOA
 
 #define swuartSetTxLine(boolean_val) do {\
-    if(true == boolean_val) GPIO_WriteBit(GPIOB, swuartTxPin, Bit_SET);\
-    else GPIO_WriteBit(GPIOB, swuartTxPin, Bit_RESET);\
+    if(true == boolean_val) GPIO_WriteBit(swuartGPIO, swuartTxPin, Bit_SET);\
+    else GPIO_WriteBit(swuartGPIO, swuartTxPin, Bit_RESET);\
     } while (0u);
 
-#define swuartReadtxLine()  GPIO_ReadInputDataBit(GPIOB, swuartRxPin)
+#define swuartReadtxLine()  GPIO_ReadInputDataBit(swuartGPIO, swuartRxPin)
 #define swuartIsTxMode()    (0u != swuartTxLen)
 
 #define swuartTimerPresc          (4u)
@@ -70,7 +71,7 @@ typedef union
 }swuartFrame_t;
 swuartFrame_t swuartFrame = {.startBit = 0u, .stopBits = 1u};
 
-void swuartInitTxAction(void)
+static void swuartInitTxAction(void)
 {
     swuartFrame.startBit = 0u;
     swuartFrame.stopBits = 1u;
@@ -81,7 +82,7 @@ void swuartInitTxAction(void)
     TIM_Cmd(swuartTimer, ENABLE);
 }
 
-void swuartPostTxAction(void)
+static void swuartPostTxAction(void)
 {
     swuartTxLen = 0u;
     TIM_Cmd(swuartTimer, DISABLE);
@@ -94,7 +95,7 @@ void swuartPostTxAction(void)
     }
 }
 
-void swuartInitRxAction(void)
+static void swuartInitRxAction(void)
 {
     TIM_SetCounter(swuartTimer, (uint32_t) swuartHalfBitPeriodTimVal);
 	TIM_Cmd(swuartTimer, ENABLE);
@@ -103,7 +104,7 @@ void swuartInitRxAction(void)
     swuartBitInFrameIdx = 0u;
 }
 
-void swuartPostRxAction(void)
+static void swuartPostRxAction(void)
 {
     EXTI_ClearITPendingBit(swuartEXTLine);
     NVIC_EnableIRQ(swuartEXTSource);
@@ -114,7 +115,7 @@ void swuartPostRxAction(void)
     }
 }
 
-void swuartRxIdleAction(void)
+static void swuartRxIdleAction(void)
 {
     TIM_Cmd(swuartTimer, DISABLE);
     TIM_SetCounter(swuartTimer, (uint32_t) 0u);
@@ -199,25 +200,25 @@ static void swuartTimerInit(void)
 static void swuartPinsInit(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct;
-    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
+    RCC_AHBPeriphClockCmd(RCC_AHBENR_GPIOAEN, ENABLE);
 
     /* To preserve GND-pulse after initialization */
-    GPIO_WriteBit(GPIOB, swuartTxPin, Bit_SET);
+    GPIO_WriteBit(swuartGPIO, swuartTxPin, Bit_SET);
 
     GPIO_InitStruct.GPIO_Pin = swuartTxPin;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
+    GPIO_Init(swuartGPIO, &GPIO_InitStruct);
 
     GPIO_InitStruct.GPIO_Pin = swuartRxPin;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
-    GPIO_Init(GPIOB, &GPIO_InitStruct);
+    GPIO_Init(swuartGPIO, &GPIO_InitStruct);
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, EXTI_PinSource7);
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource11);
 
 	EXTI_InitTypeDef EXTI_InitStruct;
 	EXTI_InitStruct.EXTI_Line = swuartEXTLine;

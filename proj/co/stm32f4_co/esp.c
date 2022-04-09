@@ -64,6 +64,7 @@ void sendToESP(uint8_t *recv_buf, uint8_t recv_len)
 	at_cmd[at_len++] = '\n';
 	
 	sendATcmd(&at_cmd[0], at_len);
+	/* Check for response */
 	delay_ms(1);
 	sendATcmd(&crc16_str[0], crc16_len);
 	sendATcmd(&udp_buf[0], buf_len);
