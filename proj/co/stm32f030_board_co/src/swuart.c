@@ -32,7 +32,7 @@
 #define swuartBitPeriodTimVal     (125u)
 #define swuartPeriodCorrection    (swuartTimerPresc * 15u)
 #define swuartHalfBitPeriodTimVal ((swuartBitPeriodTimVal / 2u) + swuartPeriodCorrection)
-#define swuartTxBufSize           (32u)
+#define swuartTxBufSize           (64u)
 #define swuartMaxBitInByteShift   (7u)
 #define swuartBitInFrame          (10u)
 #define swuartStartBitIdx         (0u)

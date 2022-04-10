@@ -49,7 +49,7 @@ static void swuartTxComplete(uint16_t txByteNmb)
 }
 static void swuartRxComplete(uint8_t rxByteNmb)
 {
-	swuartSend((uint8_t *)&swuartBuf[0], swuartRxCnt);
+	//swuartSend((uint8_t *)&swuartBuf[0], swuartRxCnt);
 	swuartRxCnt = 0;
 }
 
@@ -204,7 +204,7 @@ void SysTick_Handler()
 
 void initESP(void)
 {
-	espConfig esp_conf;
+	static espConfig esp_conf;
 	esp_conf.espWriteATCommand = &swuartSend;
 	espInit(&esp_conf);
 }
@@ -222,6 +222,9 @@ int main()
 	InitUsart1();
 	TIM3_Init();
 
+	swuartInit();
+	//swuartInitClb(&swuartTxComplete, &swuartRxByteComplete, &swuartRxComplete);
+	
 	sregsInit();
 	initESP();
 

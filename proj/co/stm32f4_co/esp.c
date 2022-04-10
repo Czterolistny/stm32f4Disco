@@ -20,7 +20,7 @@ static uint8_t uint_to_string(char *s, uint16_t x);
 static uint8_t _strlen(char *s);
 inline static void sendATcmd(char *cmd, uint8_t len);
 
-espConfig *config;
+const espConfig *config;
 
 void espInit(espConfig *conf)
 {
@@ -30,14 +30,14 @@ void espInit(espConfig *conf)
 	}else
 		return;
 
-	config->espWriteATCommand((uint8_t *) &estabUDPInitcmd[0], sizeof(estabUDPInitcmd)/sizeof(estabUDPInitcmd[0]));
+	(*config->espWriteATCommand)((uint8_t *) &estabUDPInitcmd[0], sizeof(estabUDPInitcmd)/sizeof(estabUDPInitcmd[0]));
 
 	delay_ms(1);
 }
 
 static void sendATcmd(char *cmd, uint8_t len)
 {
-	config->espWriteATCommand((uint8_t*) cmd, len);
+	(*config->espWriteATCommand)((uint8_t*) cmd, len);
 }
 
 void sendToESP(uint8_t *recv_buf, uint8_t recv_len)
@@ -64,10 +64,12 @@ void sendToESP(uint8_t *recv_buf, uint8_t recv_len)
 	at_cmd[at_len++] = '\n';
 	
 	sendATcmd(&at_cmd[0], at_len);
-	/* Check for response */
-	delay_ms(1);
+	/* TODO - Check for response - remove delays */
+	delay_ms(10); 
 	sendATcmd(&crc16_str[0], crc16_len);
+	delay_ms(10);
 	sendATcmd(&udp_buf[0], buf_len);
+	delay_ms(10);
 	
 }
 
