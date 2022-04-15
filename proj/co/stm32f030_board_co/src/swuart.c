@@ -133,7 +133,7 @@ void TIM14_IRQHandler()
         {
             if( swuartTxLen != swuartTxByteIdx )
             {
-    	        swuartSetTxLine( ((swuartFrame.frame & (1 << swuartBitInFrameIdx)) > 0u) );
+    	        swuartSetTxLine( ((swuartFrame.frame & (1u << swuartBitInFrameIdx)) > 0u) );
                 if( (swuartBitInFrame - 1u) == swuartBitInFrameIdx )
                 {
                     swuartBitInFrameIdx = 0u;
@@ -144,7 +144,7 @@ void TIM14_IRQHandler()
                 }
             }else
             {
-                swuartTxByteIdx = 0;
+                swuartTxByteIdx = 0u;
                 swuartPostTxAction();
             }
         }else
@@ -181,7 +181,7 @@ static void swuartTimerInit(void)
 	/* 1/(115200) Timer */
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
     TIM_TimeBaseInitStruct.TIM_Prescaler = swuartTimerPresc;
-    TIM_TimeBaseInitStruct.TIM_Period = (swuartBitPeriodTimVal - 1);
+    TIM_TimeBaseInitStruct.TIM_Period = (swuartBitPeriodTimVal - 1u);
     TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
     TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
 
@@ -189,7 +189,7 @@ static void swuartTimerInit(void)
 
     NVIC_InitTypeDef NVIC_InitStruct;
     NVIC_InitStruct.NVIC_IRQChannel = TIM14_IRQn;
-    NVIC_InitStruct.NVIC_IRQChannelPriority = 0;
+    NVIC_InitStruct.NVIC_IRQChannelPriority = 0u;
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
 	
@@ -229,7 +229,7 @@ static void swuartPinsInit(void)
 	
     NVIC_InitTypeDef NVIC_InitStruct;
 	NVIC_InitStruct.NVIC_IRQChannel = swuartEXTSource;
-    NVIC_InitStruct.NVIC_IRQChannelPriority = 0x00;
+    NVIC_InitStruct.NVIC_IRQChannelPriority = 1u;/*1u < TIM16 Irq!*/
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
 }
@@ -238,7 +238,8 @@ void swuartSend(uint8_t *buf, uint8_t len)
 {
     if(swuartTxBufSize >= len)
     {
-        for(uint8_t i = 0; i < len; ++i)
+        while( true == swuartIsTxMode() );
+        for(uint8_t i = 0u; i < len; ++i)
         {
             swuartTxBuf[i] = buf[i];
         }
