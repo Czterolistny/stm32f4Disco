@@ -5,9 +5,26 @@
 #include <stm32f0xx_spi.h>
 #include "stdbool.h"
 
+
+#define MSB_FIRST
+#ifdef MSB_FIRST
+    #define gdispPixMask                    (0xE0u)
+    #define gdispIncrPixIter(pixIter)       (pixIter >> gdispPixNmbInWord)
+    #define gdispFirstPixMask               (4u)
+    #define gdispThirdPixMask               (1u)
+    #define gdispMaxValPixShiftByte (gdispPixMask >> 5u)
+#else
+    #define gdispPixMask                    (0x07u)
+    #define gdispIncrPixIter(pixIter)       (pixIter << gdispPixNmbInWord)
+    #define gdispFirstPixMask               (1u)
+    #define gdispThirdPixMask               (4u)
+    #define gdispMaxValPixShiftByte (gdispPixMask << 5u)
+#endif
+
+#define gdispSecondPixMask              (2u)
+
 #define gdispXRes               (240u)
 #define gdispYRes               (128u)
-#define gdispMaxValPixShiftByte (gdispPixMask << 5u)
 #define gdispPORT               GPIOB
 #define gdispPixNmbInWord       (3u)
 
@@ -38,11 +55,11 @@
                                 } while (0u);
 
 #define gdispSetMOSI(boolean_val) do {\
-    if(true == boolean_val) GPIO_SetBits(gdispPORT, gdispPinMOSI);\
-    else GPIO_ResetBits(gdispPORT, gdispPinMOSI);\
+    if(true == boolean_val) \
+        GPIO_SetBits(gdispPORT, gdispPinMOSI);\
+    else \
+        GPIO_ResetBits(gdispPORT, gdispPinMOSI);\
     } while (0u);
-
-#define gdispPixMask    (7u)
 
 static const uint8_t gdispInitBuf[] = {0xe2, 0x25, 0x2b, 0xc4, 0xc8, 0x00, 0xa1, 0xd1, 0x89, 0xd6, 0xeb,
                                      0x81, 0x12, 0xb0, 0xa6, 0xf1, 0x7f, 0xf4, 0x00, 0xf5, 0x00, 0xf6,
@@ -141,16 +158,16 @@ static void gdispSetPixBuf(uint8_t pix, uint8_t * buf)
 {
     buf[0] = 0u; buf[1] = 0u;
 
-    if( 0u != (0x01u & pix) )
+    if( 0u != (gdispFirstPixMask & pix) )
     {
         buf[0] |= 0xF0u;
     }
-    if( 0u != (0x02u & pix) )
+    if( 0u != (gdispSecondPixMask & pix) )
     {
         buf[1] |= 0x80u;
         buf[0] |= 0x07u;
     }
-    if( 0u != (0x04u & pix) )
+    if( 0u != (gdispThirdPixMask & pix) )
     {
         buf[1] |= 0x1Fu;
     }
@@ -166,6 +183,34 @@ static void gdispClearDisp(void)
     }
 }
 
+void gdispSetRow(uint8_t row)
+{
+    uint8_t cmd[] = {0x60u, 0x70u};
+    if( gdispYRes > row )
+    {   
+        cmd[0] += (row % 0x10u);
+        cmd[1] += (row / 0x10u);
+        gdispSendCmd(&cmd[0], 2u);
+    }
+}
+
+void gdispSetCol(uint8_t col)
+{
+    uint8_t cmd[] = {0x00, 0x10};
+    if( (gdispXRes / 3u) > col )
+    {   
+        cmd[0] += (col % 0x10u);
+        cmd[1] += (col / 0x10u);
+        gdispSendCmd(&cmd[0], 2u);
+    }
+}
+
+void gdispSetPos(uint8_t row, uint8_t col)
+{
+    gdispSetCol(col);
+    gdispSetRow(row);
+}
+
 void gdispSendData(uint8_t * buf, uint8_t len)
 {
     uint16_t pixIter = gdispPixMask;
@@ -179,17 +224,33 @@ void gdispSendData(uint8_t * buf, uint8_t len)
         for(; true == byteUnProcessed ;)
         {
             byteUnProcessed = false;
-            uint8_t pixVal = (buf[byteIdx] & (uint8_t)pixIter) >> pixIterShiftCnt;
+            uint8_t pixVal;
+        #ifdef MSB_FIRST
+            if( 5u > pixIterShiftCnt )
+                pixVal = (buf[byteIdx] & (uint8_t)pixIter) >> (5u - pixIterShiftCnt);
+            else
+                pixVal = (buf[byteIdx] & (uint8_t)pixIter) << (pixIterShiftCnt - 5u);
+            
+            if( (uint16_t)0x07u > pixIter )
+        #else
+            pixVal = (buf[byteIdx] & (uint8_t)pixIter) >> pixIterShiftCnt;
             if( (uint16_t)0xFFu < pixIter )
+        #endif
             {
                 if( len > (byteIdx + 1u) )
                 {
+                #ifdef MSB_FIRST
+                    uint8_t innerShift = (pixIter & 1u) + ((pixIter >> 1u) & 1u);
+                    pixIterRemaind = gdispPixNmbInWord - innerShift;
+                    pixVal |= (buf[byteIdx + 1u] & (uint8_t)(gdispPixMask << innerShift)) >> (5u + innerShift);
+                    pixIter = gdispPixMask >> pixIterRemaind;
+                #else
                     pixIter = pixIter >> 8u;
                     uint8_t innerShift = (pixIter & 1u) + ((pixIter >> 1u) & 1u);
                     pixIterRemaind = gdispPixNmbInWord - innerShift;
                     pixVal |= ((buf[byteIdx + 1u] & (uint8_t)pixIter) << pixIterRemaind);
                     pixIter = gdispPixMask << innerShift;
-
+                #endif
                     pixIterShiftCnt = pixIterShiftCnt - 5u;
                 }
             }
@@ -200,7 +261,7 @@ void gdispSendData(uint8_t * buf, uint8_t len)
             }
             else
             {
-                pixIter = pixIter << gdispPixNmbInWord;
+                pixIter = gdispIncrPixIter(pixIter);
                 pixIterShiftCnt += gdispPixNmbInWord;
                 byteUnProcessed = true;
             }
@@ -209,16 +270,6 @@ void gdispSendData(uint8_t * buf, uint8_t len)
             gdispSendRawData(&dataBuf[0], 2u);
         }
         byteUnProcessed = true;
-    }
-}
-
-void gdispTest(void)
-{
-    uint8_t buf[2];
-    for(uint16_t i = 0x00u; i < 0xa4; ++i)
-    {
-        gdispSetPixBuf(1u, &buf[0]);
-        gdispSendRawData(&buf[0], 2u);
     }
 }
 
@@ -231,5 +282,4 @@ void gdispInit(void)
     gdispSendCmd((uint8_t *) &gdispInitBuf[0], sizeof(gdispInitBuf)/sizeof(gdispInitBuf[0]));
     
     gdispClearDisp();
-
 }
