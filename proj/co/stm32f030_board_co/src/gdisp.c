@@ -4,36 +4,45 @@
 #include <stm32f0xx_rcc.h>
 #include <stm32f0xx_spi.h>
 #include "stdbool.h"
-
+#include "image.h"
 
 #define MSB_FIRST
 #ifdef MSB_FIRST
     #define gdispPixMask                    (0xE0u)
     #define gdispIncrPixIter(pixIter)       (pixIter >> gdispPixNmbInWord)
-    #define gdispFirstPixMask               (4u)
-    #define gdispThirdPixMask               (1u)
-    #define gdispMaxValPixShiftByte (gdispPixMask >> 5u)
+    #define gdispFirstPixIdx                (4u)
+    #define gdispThirdPixIdx                (1u)
+    #define gdispMaxValPixShiftByte         (gdispPixMask >> 5u)
 #else
     #define gdispPixMask                    (0x07u)
     #define gdispIncrPixIter(pixIter)       (pixIter << gdispPixNmbInWord)
-    #define gdispFirstPixMask               (1u)
-    #define gdispThirdPixMask               (4u)
-    #define gdispMaxValPixShiftByte (gdispPixMask << 5u)
+    #define gdispFirstPixIdx                (1u)
+    #define gdispThirdPixIdx                (4u)
+    #define gdispMaxValPixShiftByte         (gdispPixMask << 5u)
 #endif
 
-#define gdispSecondPixMask              (2u)
+#define gdispSecondPixIdx       (2u)
+
+#define gdispPix0Shift          (3u)
+#define gdispPix1Shift          (0u)
+#define gdispPix2Shift          (8u)
+
+#define gdispPix0Mask           (uint16_t)(31u << gdispPix0Shift)
+#define gdispPix1Mask           (uint16_t)(0xC007u << gdispPix1Shift)
+#define gdispPix2Mask           (uint16_t)(31u << gdispPix2Shift)
 
 #define gdispXRes               (240u)
 #define gdispYRes               (128u)
-#define gdispPORT               GPIOB
+
 #define gdispPixNmbInWord       (3u)
 
-#define gdispPinMOSI    GPIO_Pin_15
-#define gdispPinMISO    GPIO_Pin_14
-#define gdispPinCLK     GPIO_Pin_13
-#define gdispPinCS      GPIO_Pin_12
+#define gdispPORT           GPIOB
+#define gdispPinMOSI        GPIO_Pin_15
+#define gdispPinMISO        GPIO_Pin_14
+#define gdispPinCLK         GPIO_Pin_13
+#define gdispPinCS          GPIO_Pin_12
 
-#define gdispPinBLigth  GPIO_Pin_0
+#define gdispPinBLigth      GPIO_Pin_0
 
 #define gdispSetMISO_High() GPIO_SetBits(gdispPORT, gdispPinMISO);
 #define gdispSetMISO_Low()  GPIO_ResetBits(gdispPORT, gdispPinMISO);
@@ -76,6 +85,9 @@ static const uint8_t gdispInitBuf4[] = {0xe2, 0x2f, 0x25, 0xea, 0x81, 0x4f, 0x40
 #endif
 
 inline static void gdispSendByte(uint8_t byte);
+inline static void gdispMake2ByteBuf(uint8_t *buf, uint16_t dispData);
+
+void gdispSetPos(uint8_t row, uint8_t col);
 
 static void gdispSendByte(uint8_t byte)
 {
@@ -154,23 +166,24 @@ static void gdispSPI_Init(void)
 
 extern void delay_ms(uint32_t ms);
 
-static void gdispSetPixBuf(uint8_t pix, uint8_t * buf)
+static void gdispMake2ByteBuf(uint8_t *buf, uint16_t dispData)
 {
-    buf[0] = 0u; buf[1] = 0u;
+    buf[0] = (uint8_t)(dispData & 0xFFu);
+    buf[1] = (uint8_t)((dispData & 0xFF00u) >> 8u);
+}
 
-    if( 0u != (gdispFirstPixMask & pix) )
-    {
-        buf[0] |= 0xF0u;
-    }
-    if( 0u != (gdispSecondPixMask & pix) )
-    {
-        buf[1] |= 0x80u;
-        buf[0] |= 0x07u;
-    }
-    if( 0u != (gdispThirdPixMask & pix) )
-    {
-        buf[1] |= 0x1Fu;
-    }
+static void gdispSetPixBuf(uint8_t pix, uint16_t * dispData)
+{
+    *dispData = (gdispFirstPixIdx & pix)? gdispPix0Mask: 0u;
+    *dispData |= (gdispSecondPixIdx & pix)? gdispPix1Mask: 0u;
+    *dispData |= (gdispThirdPixIdx & pix)? gdispPix2Mask: 0u;
+}
+
+static void gdispSetGrayScale(uint8_t pix0, uint8_t pix1, uint8_t pix2, uint16_t *dispData)
+{
+    *dispData = (uint16_t) (pix0 << gdispPix0Shift);
+    *dispData |= (uint16_t) (( ((pix1 & 0x1Cu) >> 2u) | ((pix1 & 0x03u) << 14u)) << gdispPix1Shift);
+    *dispData |= (uint16_t) (pix2 << gdispPix2Shift);
 }
 
 static void gdispClearDisp(void)
@@ -217,6 +230,7 @@ void gdispSendData(uint8_t * buf, uint8_t len)
     uint8_t pixIterShiftCnt = 0u;
     uint8_t pixIterRemaind;
     uint8_t dataBuf[2];
+    uint16_t dispData;
     bool byteUnProcessed = true;
 
     for(uint8_t byteIdx = 0u; byteIdx < len; ++byteIdx)
@@ -266,7 +280,8 @@ void gdispSendData(uint8_t * buf, uint8_t len)
                 byteUnProcessed = true;
             }
             
-            gdispSetPixBuf((uint8_t)pixVal, &dataBuf[0]);
+            gdispSetPixBuf((uint8_t)pixVal, &dispData);
+            gdispMake2ByteBuf(&dataBuf[0], dispData);
             gdispSendRawData(&dataBuf[0], 2u);
         }
         byteUnProcessed = true;
