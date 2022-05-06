@@ -49,7 +49,7 @@ static void swuartTxComplete(uint16_t txByteNmb)
 }
 static void swuartRxComplete(uint8_t rxByteNmb)
 {
-	//swuartSend((uint8_t *)&swuartBuf[0], swuartRxCnt);
+	swuartSend((uint8_t *)&swuartBuf[0], swuartRxCnt);
 	swuartRxCnt = 0;
 }
 
@@ -215,9 +215,6 @@ int main()
     SysTick_Config(SystemCoreClock / 1000);
 
 	initTestPin();
-
-	/* SW uart test - never return function */
-	//swuartTest();
 
 	InitUsart1();
 	TIM3_Init();
