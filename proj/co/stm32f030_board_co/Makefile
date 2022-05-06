@@ -13,21 +13,22 @@ BIN_DIR = binary
 # vpath is used so object files are written to the current directory instead
 # of the same directory as their source files
 vpath %.c $(CURDIR)/../../../Libraries/STM32F0xx_StdPeriph_Driver/src \
-			$(CURDIR)/../../../hardware $(CURDIR)/../../common
+			$(CURDIR)/../../../hardware $(CURDIR)/../../common $(CURDIR)/src
 
 vpath %.s $(STARTUP)
 ASRC=startup_stm32f030.s
 
 # Project Source Files
 SRC+=main.c
+SRC+=sregs.c
+SRC+=debugPins.c
 
 # Project Source Files
-COMMON_SRC+=misc.c
 COMMON_SRC+=stm32f0xx_it.c
+COMMON_SRC+=stm32f0xx_misc.c
 COMMON_SRC+=system_stm32f0xx.c
 
 # Standard Peripheral Source Files
-COMMON_SRC+=stm32f0xx_exti.c
 COMMON_SRC+=stm32f0xx_syscfg.c
 COMMON_SRC+=stm32f0xx_tim.c
 COMMON_SRC+=stm32f0xx_usart.c
@@ -38,17 +39,21 @@ COMMON_SRC+=stm32f0xx_gpio.c
 INCLUDE+=-I$(CURDIR)/../../../Libraries/CMSIS/Device/ST/STM32F0xx/Include
 INCLUDE+=-I$(CURDIR)/../../../Libraries/STM32F0xx_StdPeriph_Driver/inc
 
+INCLUDE+=-Iinc/
 INCLUDE+=-I$../../common
 INCLUDE+=-I$../../usart
+
+HSE_CLK=-DHSE_VALUE=12000000
+CPU_CORE=-mcpu=cortex-m0
 
 CDEFS=-DUSE_STDPERIPH_DRIVER
 CDEFS+=-DSTM32F0XX
 CDEFS+=-DSTM32F030xC
-CDEFS+=-DHSE_VALUE=8000000
 CDEFS+=-D__FPU_PRESENT=1
 CDEFS+=-D__FPU_USED=0
+CDEFS+=$(HSE_CLK)
 
-MCUFLAGS+=
+MCUFLAGS+=$(CPU_CORE)
 COMMONFLAGS+=
 CFLAGS+= $(INCLUDE) $(CDEFS)
 

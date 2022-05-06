@@ -27,26 +27,30 @@ export SIZE:=$(TOOLCHAIN_PATH)/$(TOOLCHAIN_PREFIX)-size
 export OPTLVL:=0
 export DBG:=-g
 
-#export INCLUDE:=
+export INCLUDE:=
 INCLUDE=-I$(CURDIR)/hardware
 INCLUDE+=-I$(CURDIR)/Libraries/CMSIS/Device/ST/STM32F4xx/Include
 INCLUDE+=-I$(CURDIR)/Libraries/CMSIS/Include
 INCLUDE+=-I$(CURDIR)/Libraries/STM32F4xx_StdPeriph_Driver/inc
 INCLUDE+=-I$(CURDIR)/config
 
-HSE_CLK?=8000000
+export HSE_CLK:=
+HSE_CLK?=-DHSE_VALUE=8000000
+export CPU_CORE:=
+CPU_CORE?=-mcpu=cortex-m4
 
 export CDEFS:=
 CDEFS:=-DUSE_STDPERIPH_DRIVER
 CDEFS+=-DSTM32F4XX
 CDEFS+=-DSTM32F40_41xxx
-CDEFS+=-DHSE_VALUE=$(HSE_CLK)
+CDEFS+=$(HSE_CLK)
 CDEFS+=-D__FPU_PRESENT=1
 CDEFS+=-D__FPU_USED=0
 CDEFS+=-DARM_MATH_CM4
 
-export MCUFLAGS:=-mcpu=cortex-m4 -mthumb -mfloat-abi=soft -mfpu=fpv4-sp-d16 -fsingle-precision-constant\
+export MCUFLAGS:=$(CPU_CORE) -mthumb -mfloat-abi=soft -mfpu=fpv4-sp-d16 -fsingle-precision-constant\
 					-finline-functions -Wdouble-promotion -std=gnu99 --specs=nosys.specs
+
 export COMMONFLAGS:=-O$(OPTLVL) $(DBG) -Wall -ffunction-sections -fdata-sections
 export CFLAGS:=$(COMMONFLAGS) $(MCUFLAGS) $(INCLUDE) $(CDEFS)
 

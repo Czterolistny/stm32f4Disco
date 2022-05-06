@@ -64,26 +64,6 @@ Reset_Handler:
   ldr   r0, =_estack
   mov   sp, r0          /* set stack pointer */
 
-/*Check if boot space corresponds to test memory*/
- 
-    LDR R0,=0x00000004
-    LDR R1, [R0]
-    LSRS R1, R1, #24
-    LDR R2,=0x1F
-    CMP R1, R2
-    BNE ApplicationStart
-
- /*SYSCFG clock enable*/
-
-    LDR R0,=0x40021018
-    LDR R1,=0x00000001
-    STR R1, [R0]
-
-/*Set CFGR1 register with flash memory remap at address 0*/
-    LDR R0,=0x40010000
-    LDR R1,=0x00000000
-    STR R1, [R0]
-
 ApplicationStart:
 /* Copy the data segment initializers from flash to SRAM */
   movs r1, #0
@@ -103,6 +83,7 @@ LoopCopyDataInit:
   bcc CopyDataInit
   ldr r2, =_sbss
   b LoopFillZerobss
+  
 /* Zero fill the bss segment. */
 FillZerobss:
   movs r3, #0
@@ -116,14 +97,12 @@ LoopFillZerobss:
   bcc FillZerobss
 
 /* Call the clock system intitialization function.*/
-    bl  SystemInit
-    
+  bl  SystemInit
 /* Call the application's entry point.*/
   bl main
   
 LoopForever:
     b LoopForever
-
 
 .size Reset_Handler, .-Reset_Handler
 
@@ -204,7 +183,7 @@ g_pfnVectors:
   .word 0
   .word 0
   .word 0
-  .word BootRAM          /* @0x108. This is for boot in RAM mode for 
+  .word 0          /* @0x108. This is for boot in RAM mode for 
                             STM32F0xx devices. */
  
 
