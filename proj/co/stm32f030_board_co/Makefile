@@ -13,15 +13,18 @@ BIN_DIR = binary
 # vpath is used so object files are written to the current directory instead
 # of the same directory as their source files
 vpath %.c $(CURDIR)/../../../Libraries/STM32F0xx_StdPeriph_Driver/src \
-			$(CURDIR)/../../../hardware $(CURDIR)/../../common $(CURDIR)/src
+			$(CURDIR)/../../../hardware $(CURDIR)/../../common $(CURDIR)/src \
+			$(CURDIR)/../stm32f4_co
 
 vpath %.s $(STARTUP)
-ASRC=startup_stm32f030.s
+ASRC=startup_stm32f030xc.s
 
 # Project Source Files
 SRC+=main.c
 SRC+=sregs.c
 SRC+=debugPins.c
+SRC+=swuart.c
+SRC+=esp.c
 
 # Project Source Files
 COMMON_SRC+=stm32f0xx_it.c
@@ -34,6 +37,7 @@ COMMON_SRC+=stm32f0xx_tim.c
 COMMON_SRC+=stm32f0xx_usart.c
 COMMON_SRC+=stm32f0xx_rcc.c
 COMMON_SRC+=stm32f0xx_gpio.c
+COMMON_SRC+=stm32f0xx_exti.c
 
 # Standard Peripheral Header Files
 INCLUDE+=-I$(CURDIR)/../../../Libraries/CMSIS/Device/ST/STM32F0xx/Include
@@ -42,18 +46,26 @@ INCLUDE+=-I$(CURDIR)/../../../Libraries/STM32F0xx_StdPeriph_Driver/inc
 INCLUDE+=-Iinc/
 INCLUDE+=-I$../../common
 INCLUDE+=-I$../../usart
+INCLUDE+=-I../stm32f4_co
 
 HSE_CLK=-DHSE_VALUE=12000000
-CPU_CORE=-mcpu=cortex-m0
+CPU_CORE=cortex-m0
+
+CFLAGS:=$(CFLAGS:cortex-m4=$(CPU_CORE))
+MCUFLAGS:=$(MCUFLAGS:cortex-m4=$(CPU_CORE))
+
+CFLAGS:=$(CFLAGS:8000000=12000000)
+CFLAGS:=$(CFLAGS:DSTM32F4XX=DSTM32F0XX)
+CFLAGS:=$(CFLAGS:DSTM32F40_41xxx=DSTM32F030xC)
 
 CDEFS=-DUSE_STDPERIPH_DRIVER
-CDEFS+=-DSTM32F0XX
-CDEFS+=-DSTM32F030xC
+#CDEFS+=-DSTM32F0XX
+#CDEFS+=-DSTM32F030xC
 CDEFS+=-D__FPU_PRESENT=1
 CDEFS+=-D__FPU_USED=0
-CDEFS+=$(HSE_CLK)
+CDEFS+=
 
-MCUFLAGS+=$(CPU_CORE)
+MCUFLAGS+=
 COMMONFLAGS+=
 CFLAGS+= $(INCLUDE) $(CDEFS)
 
@@ -99,3 +111,4 @@ clean_common:
 	
 flash:
 	@st-flash write $(BIN_DIR)/$(TARGET).bin 0x8000000
+	@st-flash reset

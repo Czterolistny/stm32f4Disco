@@ -218,7 +218,7 @@ void TIM2_Init()
 	
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 
-	//10ms
+	/* 5ms timer */
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
     TIM_TimeBaseInitStruct.TIM_Prescaler = 999;
     TIM_TimeBaseInitStruct.TIM_Period = 419;
@@ -364,6 +364,21 @@ void initDispPins(void)
 	
 	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7;
     GPIO_Init(GPIOB, &GPIO_InitStruct);
+}
+
+void sendUART3(uint8_t *cmd, uint8_t nmbBytes)
+{
+	for(uint8_t i = 0; i < nmbBytes; ++i){
+	        while (USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
+	        USART_SendData(USART3, cmd[i]);
+	}
+}
+
+void initESP(void)
+{
+	espConfig esp_conf;
+	esp_conf.espWriteATCommand = &sendUART3;
+	espInit(&esp_conf);
 }
 
 int main(void) {

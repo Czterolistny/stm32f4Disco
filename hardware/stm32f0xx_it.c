@@ -103,14 +103,14 @@ void PendSV_Handler(void)
   * @param  None
   * @retval None
   */
-void EXTI4_15_IRQHandler(void)
-{
-  /* As the following address is invalid (not mapped), a Hardfault exception
-  will be generated with an infinite loop and when the WWDG counter falls to 63
-  the WWDG reset occurs */
-  *(volatile unsigned int *) 0xA0003000 = 0xFF;
-
-}
+//void EXTI4_15_IRQHandler(void)
+//{
+//  /* As the following address is invalid (not mapped), a Hardfault exception
+//  will be generated with an infinite loop and when the WWDG counter falls to 63
+//  the WWDG reset occurs */
+//  *(volatile unsigned int *) 0xA0003000 = 0xFF;
+//
+//}
 /**
   * @}
   */

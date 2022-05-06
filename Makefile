@@ -34,10 +34,9 @@ INCLUDE+=-I$(CURDIR)/Libraries/CMSIS/Include
 INCLUDE+=-I$(CURDIR)/Libraries/STM32F4xx_StdPeriph_Driver/inc
 INCLUDE+=-I$(CURDIR)/config
 
-export HSE_CLK:=
+
 HSE_CLK?=-DHSE_VALUE=8000000
-export CPU_CORE:=
-CPU_CORE?=-mcpu=cortex-m4
+CPU_CORE:=cortex-m4
 
 export CDEFS:=
 CDEFS:=-DUSE_STDPERIPH_DRIVER
@@ -48,7 +47,7 @@ CDEFS+=-D__FPU_PRESENT=1
 CDEFS+=-D__FPU_USED=0
 CDEFS+=-DARM_MATH_CM4
 
-export MCUFLAGS:=$(CPU_CORE) -mthumb -mfloat-abi=soft -mfpu=fpv4-sp-d16 -fsingle-precision-constant\
+export MCUFLAGS:=-mcpu=$(CPU_CORE) -mthumb -mfloat-abi=soft -mfpu=fpv4-sp-d16 -fsingle-precision-constant\
 					-finline-functions -Wdouble-promotion -std=gnu99 --specs=nosys.specs
 
 export COMMONFLAGS:=-O$(OPTLVL) $(DBG) -Wall -ffunction-sections -fdata-sections

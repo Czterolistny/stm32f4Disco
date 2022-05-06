@@ -18,22 +18,22 @@
 
 static void sregRefresh(uint16_t outVal);
 
-static uint16_t sregOutput = (SREGS_ESP_UART_DEFAULT_STATE << 15u)\
-                            || (SREGS_ESP_DTR_RTS_EN_DEFAULT_STATE << 14u)\
-                            || (SREGS_UART_BOOT_EN_DEFAULT_STATE << 13u)\
-                            || (SREGS_ESP_SW_UART_EN_DEFAULT_STATE << 12u)\
-                            || (SREGS_ESP_RTS_DEFAULT_STATE << 11u)\
-                            || (SREGS_ESP_DTR_DEFAULT_STATE << 10u)\
-                            || (SREGS_SD_CS_DEFAULT_STATE << 9u)\
-                            || (SREGS_SREG1_OUT_DEFAULT_STATE << 8u)\
-                            || (SREGS_ESP_EN_DEFAULT_STATE << 7u)\
-                            || (SREGS_ESP_WAKE_DEFAULT_STATE << 6u)\
-                            || (SREGS_DIG_OUT2_DEFAULT_STATE << 5u)\
-                            || (SREGS_MCU_RST_DEFAULT_STATE << 4u)\
-                            || (SREGS_FLASH_CS_DEFAULT_STATE << 3u)\
-                            || (SREGS_BOOT0_DEFAULT_STATE << 2u)\
-                            || (SREGS_UNDEF1 << 1u)\
-                            || (SREGS_UNDEF2 << 0u);
+static uint16_t sregOutput = (SREGS_ESP_UART_EN_DEFAULT_STATE      << 15u)\
+                             | (SREGS_ESP_DTR_RTS_EN_DEFAULT_STATE << 14u)\
+                             | (SREGS_UART_BOOT_EN_DEFAULT_STATE   << 13u)\
+                             | (SREGS_ESP_SW_UART_EN_DEFAULT_STATE << 12u)\
+                             | (SREGS_ESP_RTS_DEFAULT_STATE        << 11u)\
+                             | (SREGS_ESP_DTR_DEFAULT_STATE        << 10u)\
+                             | (SREGS_SD_CS_DEFAULT_STATE          << 9u)\
+                             | (SREGS_SREG1_OUT_DEFAULT_STATE      << 8u)\
+                             | (SREGS_ESP_EN_DEFAULT_STATE         << 7u)\
+                             | (SREGS_ESP_WAKE_DEFAULT_STATE       << 6u)\
+                             | (SREGS_DIG_OUT2_DEFAULT_STATE       << 5u)\
+                             | (SREGS_MCU_RST_DEFAULT_STATE        << 4u)\
+                             | (SREGS_FLASH_CS_DEFAULT_STATE       << 3u)\
+                             | (SREGS_BOOT0_DEFAULT_STATE          << 2u)\
+                             | (SREGS_UNDEF1                       << 1u)\
+                             | (SREGS_UNDEF2                       << 0u);
 
 void sregsInit(void)
 {

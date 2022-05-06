@@ -4,21 +4,21 @@
 #include <stdbool.h>
 
 /* Sregs default output states - set after sregsInit() */
-#define SREGS_ESP_UART_DEFAULT_STATE        ((bool) 1u)
+#define SREGS_ESP_UART_EN_DEFAULT_STATE     ((bool) 0u)
 #define SREGS_ESP_DTR_RTS_EN_DEFAULT_STATE  ((bool) 0u)
 #define SREGS_UART_BOOT_EN_DEFAULT_STATE    ((bool) 0u)
-#define SREGS_ESP_SW_UART_EN_DEFAULT_STATE  ((bool) 0u)
-#define SREGS_ESP_RTS_DEFAULT_STATE         ((bool) 0u)
-#define SREGS_ESP_DTR_DEFAULT_STATE         ((bool) 0u)
+#define SREGS_ESP_SW_UART_EN_DEFAULT_STATE  ((bool) 1u)
+#define SREGS_ESP_RTS_DEFAULT_STATE         ((bool) 1u)
+#define SREGS_ESP_DTR_DEFAULT_STATE         ((bool) 1u)
 #define SREGS_SD_CS_DEFAULT_STATE           ((bool) 0u)
 #define SREGS_SREG1_OUT_DEFAULT_STATE       ((bool) 1u)
-#define SREGS_ESP_EN_DEFAULT_STATE          ((bool) 0u)
+#define SREGS_ESP_EN_DEFAULT_STATE          ((bool) 1u)
 #define SREGS_ESP_WAKE_DEFAULT_STATE        ((bool) 1u)
 #define SREGS_DIG_OUT2_DEFAULT_STATE        ((bool) 1u)
-#define SREGS_MCU_RST_DEFAULT_STATE         ((bool) 0u)
+#define SREGS_MCU_RST_DEFAULT_STATE         ((bool) 1u)
 #define SREGS_FLASH_CS_DEFAULT_STATE        ((bool) 0u)
 #define SREGS_BOOT0_DEFAULT_STATE           ((bool) 0u)
-#define SREGS_UNDEF1_DEFAULT_STATE          ((bool) 0u)
+#define SREGS_UNDEF1_DEFAULT_STATE          ((bool) 1u)
 #define SREGS_UNDEF2_DEFAULT_STATE          ((bool) 1u)
 
 /* SREG outputNmb defines */
