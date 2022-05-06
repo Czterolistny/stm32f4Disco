@@ -186,6 +186,48 @@ static void gdispSetGrayScale(uint8_t pix0, uint8_t pix1, uint8_t pix2, uint16_t
     *dispData |= (uint16_t) (pix2 << gdispPix2Shift);
 }
 
+static void gdispGrayScaleTest(void)
+{
+    uint8_t x[2] = {0u, 0u};
+    uint16_t data;
+    for(uint8_t j = 0u; j < gdispYRes; ++j)
+    {
+        for(uint8_t i = 0; i < 32u; ++i)
+        {
+            gdispSetGrayScale(i, i, i, &data);
+            gdispMake2ByteBuf(&x[0], data);
+            gdispSendRawData(&x[0], 2u);
+        }
+        for(int8_t i = 31; i ; --i)
+        {
+            gdispSetGrayScale(i, i, i, &data);
+            gdispMake2ByteBuf(&x[0], data);
+            gdispSendRawData(&x[0], 2u);
+        }
+        gdispSetPos(j, 0u);
+    }
+}
+
+extern const uint8_t tux[];
+static void gdispDispTestImage(void)
+{
+    uint8_t x[2] = {0u, 0u};
+    uint16_t data;
+    uint16_t idx = 0u;
+
+    for(uint8_t j = 0u; j < imageYresolution - 1u; ++j)
+    {
+        gdispSetPos(j, 20u);
+        idx += imageXresolution;
+        for(uint16_t i = 0u; i < imageXresolution; i += 3u)
+        {
+            gdispSetGrayScale(tux[idx + i], tux[idx + 1u + i], tux[idx + 2u + i], &data);
+            gdispMake2ByteBuf(&x[0], data);
+            gdispSendRawData(&x[0], 2u);
+        }
+    }
+}
+
 static void gdispClearDisp(void)
 {
     uint8_t x = 0u;
@@ -297,4 +339,7 @@ void gdispInit(void)
     gdispSendCmd((uint8_t *) &gdispInitBuf[0], sizeof(gdispInitBuf)/sizeof(gdispInitBuf[0]));
     
     gdispClearDisp();
+
+    //gdispGrayScaleTest();
+    gdispDispTestImage();
 }
