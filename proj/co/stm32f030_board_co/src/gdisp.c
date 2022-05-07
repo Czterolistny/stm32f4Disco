@@ -4,7 +4,6 @@
 #include <stm32f0xx_rcc.h>
 #include <stm32f0xx_spi.h>
 #include "stdbool.h"
-#include "image.h"
 
 #define MSB_FIRST
 #ifdef MSB_FIRST
@@ -44,14 +43,17 @@
 
 #define gdispPinBLigth      GPIO_Pin_0
 
-#define gdispSetMISO_High() GPIO_SetBits(gdispPORT, gdispPinMISO);
-#define gdispSetMISO_Low()  GPIO_ResetBits(gdispPORT, gdispPinMISO);
+#define gdispSetMISO_High() gdispPORT->BSRR = gdispPinMISO;
+#define gdispSetMISO_Low()  gdispPORT->BRR = gdispPinMISO;
 
-#define gdispSetCLK_High()  GPIO_SetBits(gdispPORT, gdispPinCLK);
-#define gdispSetCLK_Low()   GPIO_ResetBits(gdispPORT, gdispPinCLK);
+#define gdispSetMOSI_High() gdispPORT->BSRR = gdispPinMOSI;
+#define gdispSetMOSI_Low()  gdispPORT->BRR = gdispPinMOSI;
 
-#define gdispSetCS_High()   GPIO_SetBits(gdispPORT, gdispPinCS);
-#define gdispSetCS_Low()    GPIO_ResetBits(gdispPORT, gdispPinCS);
+#define gdispSetCLK_High()  gdispPORT->BSRR = gdispPinCLK;
+#define gdispSetCLK_Low()   gdispPORT->BRR = gdispPinCLK;
+
+#define gdispSetCS_High()   gdispPORT->BSRR = gdispPinCS;
+#define gdispSetCS_Low()    gdispPORT->BRR = gdispPinCS;
 
 #define gdispSetMISO_CS_High()   do {\
                                     gdispSetMISO_High();\
@@ -65,9 +67,9 @@
 
 #define gdispSetMOSI(boolean_val) do {\
     if(true == boolean_val) \
-        GPIO_SetBits(gdispPORT, gdispPinMOSI);\
+        gdispSetMOSI_High()\
     else \
-        GPIO_ResetBits(gdispPORT, gdispPinMOSI);\
+        gdispSetMOSI_Low()\
     } while (0u);
 
 static const uint8_t gdispInitBuf[] = {0xe2, 0x25, 0x2b, 0xc4, 0xc8, 0x00, 0xa1, 0xd1, 0x89, 0xd6, 0xeb,
