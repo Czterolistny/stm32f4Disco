@@ -4,6 +4,7 @@
 #include <stm32f0xx_rcc.h>
 #include <stm32f0xx_spi.h>
 #include "stdbool.h"
+#include "gdispFonts.h"
 
 #define MSB_FIRST
 #ifdef MSB_FIRST
@@ -19,6 +20,8 @@
     #define gdispThirdPixIdx                (4u)
     #define gdispMaxValPixShiftByte         (gdispPixMask << 5u)
 #endif
+
+//#define BIG_ENDIAN_ORDER
 
 #define gdispSecondPixIdx       (2u)
 
@@ -90,6 +93,7 @@ inline static void gdispSendByte(uint8_t byte);
 inline static void gdispMake2ByteBuf(uint8_t *buf, uint16_t dispData);
 
 void gdispSetPos(uint8_t row, uint8_t col);
+void gdispSendData(uint8_t * buf, uint8_t len);
 
 static void gdispSendByte(uint8_t byte)
 {
@@ -170,8 +174,13 @@ extern void delay_ms(uint32_t ms);
 
 static void gdispMake2ByteBuf(uint8_t *buf, uint16_t dispData)
 {
+#ifdef BIG_ENDIAN_ORDER
+    buf[1] = (uint8_t)(dispData & 0xFFu);
+    buf[0] = (uint8_t)((dispData & 0xFF00u) >> 8u);
+#else
     buf[0] = (uint8_t)(dispData & 0xFFu);
     buf[1] = (uint8_t)((dispData & 0xFF00u) >> 8u);
+#endif
 }
 
 static void gdispSetPixBuf(uint8_t pix, uint16_t * dispData)
@@ -224,6 +233,14 @@ void gdispSetPos(uint8_t row, uint8_t col)
 {
     gdispSetCol(col);
     gdispSetRow(row);
+}
+
+void gdispSendDataU16(uint16_t data)
+{
+    uint8_t buf[2];
+    buf[1] = (uint8_t)(data & 0xFFu);
+    buf[0] = (uint8_t)((data & 0xFF00u) >> 8u);
+    gdispSendData(&buf[0], 2u);
 }
 
 void gdispSendData(uint8_t * buf, uint8_t len)
@@ -283,10 +300,42 @@ void gdispSendData(uint8_t * buf, uint8_t len)
             }
             
             gdispSetPixBuf((uint8_t)pixVal, &dispData);
-            gdispMake2ByteBuf(&dataBuf[0], dispData);
-            gdispSendRawData(&dataBuf[0], 2u);
+            gdispMake2ByteBuf(&dataBuf[0u], dispData);
+            gdispSendRawData(&dataBuf[0u], 2u);
         }
         byteUnProcessed = true;
+    }
+}
+
+void gdispWriteText(char * text, uint8_t len, uint8_t rowIdx, uint8_t colIdx)
+{
+    uint16_t dispData = 0u;
+    uint8_t signSpan;
+    FontStatus status;
+    uint8_t tmpRowIdx = rowIdx;
+    uint8_t tmpColIdx = colIdx;
+
+    gdispSetPos(rowIdx, colIdx);
+    for(uint8_t i = 0u; i < len; ++i)
+    {
+        tmpRowIdx = rowIdx;
+        status = FONT_UNKNOWN;
+        signSpan = gdispFontGetSignSpan(text[i]);
+        while( FONT_COMPLETED != status )
+        {
+            status = gdispFontsGetFontByte(text[i], &dispData);
+            if( FONT_NEXT_COLUMN == status )
+            {
+               // tmpColIdx += 1u;  
+            }else if( FONT_NEXT_ROW == status )
+            {
+                gdispSetPos(tmpRowIdx++, tmpColIdx);
+                //gdispSendDataU16(dispData);
+            }
+            gdispSendDataU16(dispData);
+        }
+        tmpColIdx += 1u + signSpan / 3u;
+        gdispSetPos(rowIdx, tmpColIdx);
     }
 }
 
@@ -299,4 +348,5 @@ void gdispInit(void)
     gdispSendCmd((uint8_t *) &gdispInitBuf[0], sizeof(gdispInitBuf)/sizeof(gdispInitBuf[0]));
     
     gdispClearDisp();
+    
 }
