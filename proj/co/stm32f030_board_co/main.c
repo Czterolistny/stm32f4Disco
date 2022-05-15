@@ -9,6 +9,7 @@
 #include "debugPins.h"
 #include "swuart.h"
 #include "esp.h"
+#include "gdisp.h"
 
 #define FAN_PERC_ADDR 	((uint8_t) 0x3F)
 #define SET_TEMP_ADDR 	((uint8_t) 0x23)
@@ -216,9 +217,6 @@ int main()
 
 	initTestPin();
 
-	/* SW uart test - never return function */
-	swuartTest();
-
 	InitUsart1();
 	TIM3_Init();
 
@@ -228,6 +226,8 @@ int main()
 	sregsInit();
 	initESP();
 
+	gdispInit();
+	
 	for (;;){
 		if( new_frame_recived == true )
 		{

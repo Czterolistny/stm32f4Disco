@@ -25,6 +25,8 @@ SRC+=sregs.c
 SRC+=debugPins.c
 SRC+=swuart.c
 SRC+=esp.c
+SRC+=gdisp.c
+SRC+=gdispFonts.c
 
 # Project Source Files
 COMMON_SRC+=stm32f0xx_it.c
