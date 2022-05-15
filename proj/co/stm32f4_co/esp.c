@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include "main.h"
 #include "esp.h"
+#include "../../common/common.h"
 
 #define CRC_INIT 0xB169
 
@@ -16,8 +17,6 @@ const uint8_t estabUDPInitcmd[] = {'A', 'T', '+', 'C', 'I', 'P', 'S', 'T', 'A', 
                                     '"', ',', '8', '9', '0', '1', ',', '8', '0', '0', '1', '\r', '\n'};
 
 static uint16_t crc16calc(char *buf, uint16_t crc, uint16_t len);
-static uint8_t uint_to_string(char *s, uint16_t x);
-static uint8_t _strlen(char *s);
 inline static void sendATcmd(char *cmd, uint8_t len);
 
 const espConfig *config;
@@ -91,35 +90,4 @@ static uint16_t crc16calc(char *buf, uint16_t crc, uint16_t len)
     }
 
     return crc;
-}
-
-static uint8_t uint_to_string(char *s, uint16_t x)
-{
-	uint8_t i = 0;
-	if(x == 0){
-		*s++ = '0';
-		*s++ = ' ';
-		i += 2;
-		return i;
-	}
-	
-	uint16_t div = 10000;
-	while( div ){
-		if( x/div ){
-			*s++ = ((x/div) - (x / (div*10)) * 10) + '0';
-			i++;
-		}
-		div = div / 10;
-	}
-	*s = ' ';
-	i++;
-	return i;
-}
-
-static uint8_t _strlen(char *s)
-{
-	uint8_t len = 0;
-	while( *s++ != 0 )
-		len++;
-	return len;
 }

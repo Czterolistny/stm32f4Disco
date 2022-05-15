@@ -32,6 +32,7 @@ SRC+=gdispFonts.c
 COMMON_SRC+=stm32f0xx_it.c
 COMMON_SRC+=stm32f0xx_misc.c
 COMMON_SRC+=system_stm32f0xx.c
+COMMON_SRC+=common.c
 
 # Standard Peripheral Source Files
 COMMON_SRC+=stm32f0xx_syscfg.c
