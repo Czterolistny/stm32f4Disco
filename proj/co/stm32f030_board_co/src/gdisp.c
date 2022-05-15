@@ -340,6 +340,7 @@ void gdispWriteText(char * text, uint8_t len, uint8_t rowIdx, uint8_t colIdx)
     FontStatus status;
     uint8_t tmpRowIdx = rowIdx;
     uint8_t tmpColIdx = colIdx;
+    uint8_t wordRest;
 
     gdispSetPos(rowIdx, colIdx);
     for(uint8_t i = 0u; i < len; ++i)
@@ -347,16 +348,22 @@ void gdispWriteText(char * text, uint8_t len, uint8_t rowIdx, uint8_t colIdx)
         tmpRowIdx = rowIdx;
         status = FONT_UNKNOWN;
         signSpan = gdispFontGetSignSpan(text[i]);
+
         while( FONT_COMPLETED != status )
         {
             status = gdispFontsGetFontByte(text[i], &dispData);
             if( FONT_NEXT_COLUMN == status )
             {
-               // tmpColIdx += 1u;  
+                dispData = (dispData >> 1u) | (wordRest << 15u);
+                gdispSetPos(tmpRowIdx, tmpColIdx);
             }else if( FONT_NEXT_ROW == status )
             {
-                gdispSetPos(tmpRowIdx++, tmpColIdx);
-                //gdispSendDataU16(dispData);
+                gdispSetPos(tmpRowIdx, tmpColIdx + (signSpan / 16u) * 5u);
+                tmpRowIdx++;
+            }
+            if( 15u < signSpan )
+            {
+                wordRest = (dispData & 0x01u);
             }
             gdispSendDataU16(dispData);
         }
@@ -365,6 +372,17 @@ void gdispWriteText(char * text, uint8_t len, uint8_t rowIdx, uint8_t colIdx)
     }
 }
 
+void gdispTest(void)
+{
+    for(uint8_t i = 0u; i < 20u; ++i)
+    {
+        gdispSetPos(10u + i, 0u);
+        uint8_t line[] = {0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfd};
+        uint16_t line16 = 0xfefd;
+        //gdispSendData(&line[0u], 6u);
+        gdispSendDataU16(line16);
+    }
+}
 void gdispInit(void)
 {
     gdispSPI_Init();
@@ -377,10 +395,14 @@ void gdispInit(void)
 
     ///gdispFontTest();
 
-    char str[] = "Jakis napis 23059";
+    char str[] = "Makis Wapis 23059";
     gdispFontSetFontType(Font_Times_New_Roman11x12);
     gdispWriteText(&str[0], 21u, 0u, 0u);
 
     gdispFontSetFontType(Font_Times_New_Roman23x22);
-    gdispWriteText(&str[0], 18u, 10u, 0u);
+    gdispWriteText(&str[0], 16u, 10u, 0u);
+
+    //gdispFontSetFontType(Font_Times_New_Roman85x64);
+    //gdispWriteText(&str[0], 1u, 0u, 0u);
+    //gdispTest();
 }

@@ -5,10 +5,12 @@
 
 extern const char Times_New_Roman11x12[];
 extern const char Times_New_Roman23x22[];
+extern const char Times_New_Roman85x64[];
 
 typedef enum {
     Font_Times_New_Roman11x12,
     Font_Times_New_Roman23x22,
+    Font_Times_New_Roman85x64,
 }FontType;
 
 typedef struct {
@@ -16,7 +18,7 @@ typedef struct {
     const char *font_data;
     const uint8_t fontWidth;
     const uint8_t fontHeight;
-    const uint8_t fontOneCharSize;
+    const uint16_t fontOneCharSize;
 }FontCtx;
 
 typedef struct {
