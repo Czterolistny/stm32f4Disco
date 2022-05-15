@@ -16,7 +16,7 @@ typedef struct {
     const char *font_data;
     const uint8_t fontWidth;
     const uint8_t fontHeight;
-    const uint8_t fontOneCharSize;
+    const uint16_t fontOneCharSize;
 }FontCtx;
 
 typedef struct {

@@ -326,11 +326,11 @@ void gdispWriteText(char * text, uint8_t len, uint8_t rowIdx, uint8_t colIdx)
             status = gdispFontsGetFontByte(text[i], &dispData);
             if( FONT_NEXT_COLUMN == status )
             {
-               // tmpColIdx += 1u;  
+                gdispSetPos(tmpRowIdx, tmpColIdx);
             }else if( FONT_NEXT_ROW == status )
             {
-                gdispSetPos(tmpRowIdx++, tmpColIdx);
-                //gdispSendDataU16(dispData);
+                gdispSetPos(tmpRowIdx, tmpColIdx + (signSpan / 16u) * 5u);
+                tmpRowIdx++;
             }
             gdispSendDataU16(dispData);
         }
@@ -348,5 +348,11 @@ void gdispInit(void)
     gdispSendCmd((uint8_t *) &gdispInitBuf[0], sizeof(gdispInitBuf)/sizeof(gdispInitBuf[0]));
     
     gdispClearDisp();
-    
+
+    char str[] = "Makis Wapis 23059";
+    gdispFontSetFontType(Font_Times_New_Roman11x12);
+    gdispWriteText(&str[0], 21u, 0u, 0u);
+
+    gdispFontSetFontType(Font_Times_New_Roman23x22);
+    gdispWriteText(&str[0], 16u, 10u, 0u);
 }
