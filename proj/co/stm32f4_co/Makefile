@@ -28,6 +28,7 @@ COMMON_SRC+=misc.c
 COMMON_SRC+=stm32f4xx_it.c
 COMMON_SRC+=system_stm32f4xx.c
 COMMON_SRC+=dbg_pin.c
+COMMON_SRC+=common.c
 
 # Standard Peripheral Source Files
 COMMON_SRC+=stm32f4xx_exti.c
