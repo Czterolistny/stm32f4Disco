@@ -117,3 +117,7 @@ clean_common:
 flash:
 	@st-flash write $(BIN_DIR)/$(TARGET).bin 0x8000000
 	@st-flash reset
+
+debug:
+	@$(DEFAULT_TERM) -e $(DBG_SCRIPT_DIR)/f030.sh &
+	@$(GDB) $(BIN_DIR)/$(TARGET).elf -x script.gdb --tui
