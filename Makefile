@@ -88,6 +88,9 @@ substr = $(word $2,$(subst ., ,$1))
 	@echo $@
 	$(MAKE) -C $(PRJ_PATH)/$(call substr,$*,1)/$(call substr,$*,2) debug
 
+%.all: %.clean %.compile %.flash
+	@echo $@
+
 clean_common:
 	@echo [RM] COMMON_OBJ
 	@rm -f $(COMMON_OBJ_DIR)/*.o
