@@ -5,11 +5,13 @@
 
 extern const char Times_New_Roman11x12[];
 extern const char Times_New_Roman23x22[];
+extern const char Times_New_Roman57x60[];
 extern const char Times_New_Roman85x64[];
 
 typedef enum {
     Font_Times_New_Roman11x12,
     Font_Times_New_Roman23x22,
+    Font_Times_New_Roman57x60,
     Font_Times_New_Roman85x64,
 }FontType;
 
