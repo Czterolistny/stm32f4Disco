@@ -11,7 +11,7 @@ const FontCtx fontCtx[] = {
     {.font_data = &Times_New_Roman11x12[0u], .fontWidth = 12u, .fontHeight = 11u, .fontOneCharSize = 23u},
     {.font_data = &Times_New_Roman23x22[0u], .fontWidth = 23u, .fontHeight = 22u, .fontOneCharSize = 70u}};
 
-Font font = {.fontCtx = &fontCtx[0u], .type = Font_Times_New_Roman11x12, .fontNmb = sizeof(fontCtx)/sizeof(fontCtx[0])};//sizeof(fontCtx)/sizeof(fontCtx[0])};
+Font font = {.fontCtx = &fontCtx[0u], .type = Font_Times_New_Roman11x12, .fontNmb = sizeof(fontCtx)/sizeof(fontCtx[0])};
 
 inline static uint8_t gdispFontGetFontRealWidht(char font_idx);
 inline static FontCtx * gdispFontGetCurrentFontCtx(void);
@@ -51,53 +51,56 @@ uint8_t gdispFontGetSignSpan(char sign)
 
 FontStatus gdispFontsGetFontByte(char sign, uint16_t *fontData)
 {
-    static uint8_t fontRow;
-    static uint8_t rowByteIdx;
-    static uint8_t colByteIdx;
+    volatile static uint8_t currFontRowIdx;
+    volatile static uint16_t rowGroupIdx;
+    volatile static uint8_t currWordInRowNmbIdx;
     uint16_t initMask;
 
     FontCtx *ctx = gdispFontGetCurrentFontCtx();
     int8_t internalIdx = (int8_t) (sign - ' ');
-    uint8_t maxWidth = gdispFontGetFontRealWidht(internalIdx);
-    uint8_t byteInColumn = (uint8_t) (ctx->fontHeight / (gdispFontBitsInByte + 1u)) + 1u;
-    uint8_t wordInRow = (uint8_t) (maxWidth / (gdispFontBitsInWord + 1u)) + 1u;
-    const char *font_ptr = ctx->font_data;
+    uint8_t rowBitWidth = gdispFontGetFontRealWidht(internalIdx);
+    uint8_t byteInColumn = (uint8_t) (ctx->fontHeight / gdispFontBitsInByte);
+	byteInColumn += (ctx->fontHeight % gdispFontBitsInByte)? 1u: 0u; 
+    uint8_t wordInRowNmb = (uint8_t) (rowBitWidth / gdispFontBitsInWord);
+	wordInRowNmb += (rowBitWidth % gdispFontBitsInWord)? 1u: 0u;
+    const char *font_ptr = ctx->font_data + (internalIdx * ctx->fontOneCharSize);
 	FontStatus ret = FONT_COMPLETED;
 
     if( internalIdx >= 0 )
     {
-        if( ctx->fontWidth > fontRow )
+        if( ctx->fontHeight > currFontRowIdx )
         {
-            colByteIdx++;
-            if( (colByteIdx == wordInRow) )
+			*fontData = 0u;
+            initMask = (0x01u << (currFontRowIdx % gdispFontBitsInByte) );
+			
+            if( (++currWordInRowNmbIdx) == wordInRowNmb )
             {
-                maxWidth = maxWidth % gdispFontBitsInWord;
+                rowBitWidth = rowBitWidth % gdispFontBitsInWord;
             }else
             {
-				rowByteIdx = 1u + (uint8_t) (fontRow / gdispFontBitsInByte);
-                maxWidth = gdispFontBitsInWord;
+				rowGroupIdx = (uint8_t) (currFontRowIdx / gdispFontBitsInByte) + (currWordInRowNmbIdx - 1u) * (byteInColumn << 4u);
+                rowBitWidth = gdispFontBitsInWord;
                 ret = FONT_NEXT_COLUMN;
             }
-			if( 1u == wordInRow )
-				rowByteIdx = 1u + (uint8_t) (fontRow / gdispFontBitsInByte);
+			
+			if( 1u == wordInRowNmb )
+				rowGroupIdx = (uint8_t) (currFontRowIdx / gdispFontBitsInByte);
 
-            *fontData = 0u;
-            font_ptr += internalIdx * ctx->fontOneCharSize;
-            initMask = (0x01u << (fontRow % gdispFontBitsInByte) );
-            for(uint8_t i = 0u; i < maxWidth; ++i)
+            for(uint8_t i = 0u; i < rowBitWidth; ++i)
             {
-                *fontData |= ((font_ptr[rowByteIdx] & (uint8_t) initMask) >> (fontRow % gdispFontBitsInByte)) << (gdispFontBitsInWord - 1u - i);
-                rowByteIdx += byteInColumn;
+                *fontData |= ((font_ptr[rowGroupIdx + 1u] & (uint8_t) initMask) >> (currFontRowIdx % gdispFontBitsInByte)) << (gdispFontBitsInWord - 1u - i);
+                rowGroupIdx += byteInColumn;
             }
-            if( colByteIdx == wordInRow )
+			
+            if( currWordInRowNmbIdx == wordInRowNmb )
             {
-                fontRow++;
-                colByteIdx = 0u;
+                currFontRowIdx++;
+                currWordInRowNmbIdx = 0u;
                 ret = FONT_NEXT_ROW;
             }
         }else
         {
-            fontRow = 0u;
+            currFontRowIdx = 0u;
         }
     }
     return ret;
