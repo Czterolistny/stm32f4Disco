@@ -12,8 +12,8 @@ const char Times_New_Roman57x60[];
 const FontCtx fontCtx[] = { 
     {.font_data = &Times_New_Roman11x12[0u], .fontWidth = 12u, .fontHeight = 11u, .fontOneCharSize = 23u},
     {.font_data = &Times_New_Roman23x22[0u], .fontWidth = 23u, .fontHeight = 22u, .fontOneCharSize = 70u},
-    {.font_data = &Times_New_Roman57x60[0u], .fontWidth = 57u, .fontHeight = 60u, .fontOneCharSize = 457u},
-    {.font_data = &Times_New_Roman85x64[0u], .fontWidth = 85u, .fontHeight = 64u, .fontOneCharSize = 681u}};
+	{.font_data = &Times_New_Roman57x60[0u], .fontWidth = 57u, .fontHeight = 60u, .fontOneCharSize = 457u},
+	{.font_data = &Times_New_Roman85x64[0u], .fontWidth = 85u, .fontHeight = 64u, .fontOneCharSize = 681u}};
 
 Font font = {.fontCtx = &fontCtx[0u], .type = Font_Times_New_Roman11x12, .fontNmb = sizeof(fontCtx)/sizeof(fontCtx[0])};
 
@@ -55,26 +55,26 @@ uint8_t gdispFontGetSignSpan(char sign)
 
 FontStatus gdispFontsGetFontByte(char sign, uint16_t *fontData)
 {
-    static uint8_t currFontRowIdx;
-    static uint16_t rowGroupIdx;
-    static uint8_t currWordInRowNmbIdx;
+    volatile static uint8_t currFontRowIdx;
+    volatile static uint16_t rowGroupIdx;
+    volatile static uint8_t currWordInRowNmbIdx;
     uint16_t initMask;
 
     FontCtx *ctx = gdispFontGetCurrentFontCtx();
     int8_t internalIdx = (int8_t) (sign - ' ');
     uint8_t rowBitWidth = gdispFontGetFontRealWidht(internalIdx);
     uint8_t byteInColumn = (uint8_t) (ctx->fontHeight / gdispFontBitsInByte);
-    byteInColumn += (ctx->fontHeight % gdispFontBitsInByte)? 1u: 0u; 
+	byteInColumn += (ctx->fontHeight % gdispFontBitsInByte)? 1u: 0u; 
     uint8_t wordInRowNmb = (uint8_t) (rowBitWidth / gdispFontBitsInWord);
-    wordInRowNmb += (rowBitWidth % gdispFontBitsInWord)? 1u: 0u;
+	wordInRowNmb += (rowBitWidth % gdispFontBitsInWord)? 1u: 0u;
     const char *font_ptr = ctx->font_data + (internalIdx * ctx->fontOneCharSize);
-    FontStatus ret = FONT_COMPLETED;
+	FontStatus ret = FONT_COMPLETED;
 
     if( internalIdx >= 0 )
     {
         if( ctx->fontHeight > currFontRowIdx )
         {
-            *fontData = 0u;
+			*fontData = 0u;
             initMask = (0x01u << (currFontRowIdx % gdispFontBitsInByte) );
 			
             if( (++currWordInRowNmbIdx) == wordInRowNmb )
@@ -82,13 +82,13 @@ FontStatus gdispFontsGetFontByte(char sign, uint16_t *fontData)
                 rowBitWidth = rowBitWidth % gdispFontBitsInWord;
             }else
             {
-                rowGroupIdx = (uint8_t) (currFontRowIdx / gdispFontBitsInByte) + (currWordInRowNmbIdx - 1u) * (byteInColumn << 4u);
+				rowGroupIdx = (uint8_t) (currFontRowIdx / gdispFontBitsInByte) + (currWordInRowNmbIdx - 1u) * (byteInColumn << 4u);
                 rowBitWidth = gdispFontBitsInWord;
                 ret = FONT_NEXT_COLUMN;
             }
 			
-            if( 1u == wordInRowNmb )
-                rowGroupIdx = (uint8_t) (currFontRowIdx / gdispFontBitsInByte);
+			if( 1u == wordInRowNmb )
+				rowGroupIdx = (uint8_t) (currFontRowIdx / gdispFontBitsInByte);
 
             for(uint8_t i = 0u; i < rowBitWidth; ++i)
             {

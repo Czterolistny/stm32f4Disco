@@ -335,12 +335,12 @@ void gdispFontTest()
 
 void gdispWriteText(char * text, uint8_t len, uint8_t rowIdx, uint8_t colIdx)
 {
-    uint16_t dispData = 0u;
     uint8_t signSpan;
     FontStatus status;
-    uint8_t tmpRowIdx = rowIdx;
-    uint8_t tmpColIdx = colIdx;
+    uint8_t tmpRowIdx;
     uint8_t wordRest;
+    uint8_t tmpColIdx = colIdx;
+    uint16_t dispData = 0u;
 
     gdispSetPos(rowIdx, colIdx);
     for(uint8_t i = 0u; i < len; ++i)
@@ -354,35 +354,46 @@ void gdispWriteText(char * text, uint8_t len, uint8_t rowIdx, uint8_t colIdx)
             status = gdispFontsGetFontByte(text[i], &dispData);
             if( FONT_NEXT_COLUMN == status )
             {
-                dispData = (dispData >> 1u) | (wordRest << 15u);
                 gdispSetPos(tmpRowIdx, tmpColIdx);
+                tmpColIdx += 5u;
             }else if( FONT_NEXT_ROW == status )
             {
-                gdispSetPos(tmpRowIdx, tmpColIdx + (signSpan / 16u) * 5u);
+                gdispSetPos(tmpRowIdx, tmpColIdx);
+                tmpColIdx = colIdx;
                 tmpRowIdx++;
-            }
-            if( 15u < signSpan )
-            {
-                wordRest = (dispData & 0x01u);
-            }
+            }else {}
+
             gdispSendDataU16(dispData);
         }
-        tmpColIdx += 1u + signSpan / 3u;
-        gdispSetPos(rowIdx, tmpColIdx);
+        
+        colIdx += 1u + signSpan / 3u;
+        gdispSetPos(rowIdx, colIdx);
     }
 }
 
 void gdispTest(void)
 {
-    for(uint8_t i = 0u; i < 20u; ++i)
+    uint8_t row = 1u;
+    uint8_t col = 0u;
+    gdispSetPos(row, col);
+    for(uint8_t i = 0u; i < 70u; ++i)
     {
-        gdispSetPos(10u + i, 0u);
+        if( 0u == (i % 3) )
+        {
+            gdispSetPos(row++, col);
+        }
+        if( 0u == (row % 8u) )
+        {
+            row = 0u;
+            col = 24u;
+        }
         uint8_t line[] = {0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfd};
-        uint16_t line16 = 0xfefd;
+        uint16_t line16 = 0xfee0 + i;
         //gdispSendData(&line[0u], 6u);
         gdispSendDataU16(line16);
     }
 }
+
 void gdispInit(void)
 {
     gdispSPI_Init();
@@ -396,13 +407,22 @@ void gdispInit(void)
     ///gdispFontTest();
 
     char str[] = "Makis Wapis 23059";
+#if(1)
     gdispFontSetFontType(Font_Times_New_Roman11x12);
     gdispWriteText(&str[0], 21u, 0u, 0u);
 
     gdispFontSetFontType(Font_Times_New_Roman23x22);
     gdispWriteText(&str[0], 16u, 10u, 0u);
+#endif
+#if(1)
+    char str1[] = "  ";
+    gdispFontSetFontType(Font_Times_New_Roman57x60);
+    gdispWriteText(&str1[0], 2u, 30u, 0u);
 
-    //gdispFontSetFontType(Font_Times_New_Roman85x64);
-    //gdispWriteText(&str[0], 1u, 0u, 0u);
-    //gdispTest();
+    gdispFontSetFontType(Font_Times_New_Roman85x64);
+    gdispWriteText(&str1[0], 1u, 30u, 38u);
+#endif
+#if(0)
+    gdispTest();
+#endif
 }
