@@ -25,15 +25,11 @@ SRC+=sregs.c
 SRC+=debugPins.c
 SRC+=swuart.c
 SRC+=esp.c
-SRC+=gdisp.c
-SRC+=gdispFonts.c
-SRC+=i2c.c
 
 # Project Source Files
 COMMON_SRC+=stm32f0xx_it.c
 COMMON_SRC+=stm32f0xx_misc.c
 COMMON_SRC+=system_stm32f0xx.c
-COMMON_SRC+=common.c
 
 # Standard Peripheral Source Files
 COMMON_SRC+=stm32f0xx_syscfg.c
@@ -42,7 +38,6 @@ COMMON_SRC+=stm32f0xx_usart.c
 COMMON_SRC+=stm32f0xx_rcc.c
 COMMON_SRC+=stm32f0xx_gpio.c
 COMMON_SRC+=stm32f0xx_exti.c
-COMMON_SRC+=stm32f0xx_i2c.c
 
 # Standard Peripheral Header Files
 INCLUDE+=-I$(CURDIR)/../../../Libraries/CMSIS/Device/ST/STM32F0xx/Include
