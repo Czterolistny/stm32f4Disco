@@ -15,9 +15,9 @@ void i2cInit(void)
 {
     i2c1Init();
 
-    uint8_t buf[3] = {0x10u, 0u, 0u};
-    i2c1Write(0xa2u, &buf[0], 0x00, 1u);
-    i2c1Read(0xa2u, 0x00u, &buf[0], 1u);
+    uint8_t buf[3] = {5u, 0u, 0u};
+    i2c1Write(0xa2u, &buf[0], 0x09, 1u);
+    i2c1Read(0xa2u, 0x09u, &buf[0], 1u);
 }
 
 void i2cWrite(uint8_t *buf, uint8_t len)
@@ -79,15 +79,15 @@ static void i2c1Read(uint8_t i2c_addr, uint8_t reg_addr, uint8_t *read_buf, uint
     while(I2C_GetFlagStatus(I2C1, I2C_FLAG_TXIS) == RESET);
 
     I2C_SendData(I2C1, reg_addr);
-	while(I2C_GetFlagStatus(I2C1, I2C_FLAG_TC) == RESET);
+    while(I2C_GetFlagStatus(I2C1, I2C_FLAG_TC) == RESET);
 
     I2C_TransferHandling(I2C1, i2c_addr, size, I2C_AutoEnd_Mode, I2C_Generate_Start_Read);
 
-	for(uint8_t i = 0u; i < size; ++i)
+    for(uint8_t i = 0u; i < size; ++i)
     {	
-        while(I2C_GetFlagStatus(I2C1, I2C_FLAG_RXNE) == RESET)
-		read_buf[i++] = I2C_ReceiveData(I2C1);
-	}
+        while(I2C_GetFlagStatus(I2C1, I2C_FLAG_RXNE) == RESET);
+        read_buf[i] = I2C_ReceiveData(I2C1);
+    }
     
     while(I2C_GetFlagStatus(I2C1, I2C_FLAG_STOPF) == RESET);
     I2C_ClearFlag(I2C1, I2C_FLAG_STOPF);
@@ -100,16 +100,16 @@ static void i2c1Write(uint8_t i2c_addr, uint8_t *write_buf, uint8_t reg_addr, ui
     I2C_TransferHandling(I2C1, i2c_addr, 1u, I2C_Reload_Mode, I2C_Generate_Start_Write);
     while(I2C_GetFlagStatus(I2C1, I2C_FLAG_TXIS) == RESET);
 
-    I2C_SendData(I2C1, 0x19);
+    I2C_SendData(I2C1, reg_addr);
 	while(I2C_GetFlagStatus(I2C1, I2C_FLAG_TCR) == RESET);
 
-	I2C_TransferHandling(I2C1, i2c_addr, size, I2C_AutoEnd_Mode, I2C_Generate_Stop);
+	I2C_TransferHandling(I2C1, i2c_addr, size, I2C_AutoEnd_Mode, I2C_No_StartStop);
 	while(I2C_GetFlagStatus(I2C1, I2C_FLAG_TXIS) == RESET);
 
 	for(uint8_t i = 0u; i < size; ++i)
     {	
         I2C_SendData(I2C1, write_buf[i]);
-        while(I2C_GetFlagStatus(I2C1, I2C_FLAG_TCR) == RESET);
+        while(I2C_GetFlagStatus(I2C1, I2C_FLAG_TC) == SET);
     }
 
     while(I2C_GetFlagStatus(I2C1, I2C_FLAG_STOPF) == RESET);
