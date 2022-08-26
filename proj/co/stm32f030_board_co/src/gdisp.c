@@ -309,11 +309,12 @@ void gdispSendData(uint8_t * buf, uint8_t len)
 
 void gdispWriteText(char * text, uint8_t len, uint8_t rowIdx, uint8_t colIdx)
 {
-    uint16_t dispData = 0u;
     uint8_t signSpan;
     FontStatus status;
-    uint8_t tmpRowIdx = rowIdx;
+    uint8_t tmpRowIdx;
+    uint8_t wordRest;
     uint8_t tmpColIdx = colIdx;
+    uint16_t dispData = 0u;
 
     gdispSetPos(rowIdx, colIdx);
     for(uint8_t i = 0u; i < len; ++i)
@@ -327,15 +328,19 @@ void gdispWriteText(char * text, uint8_t len, uint8_t rowIdx, uint8_t colIdx)
             if( FONT_NEXT_COLUMN == status )
             {
                 gdispSetPos(tmpRowIdx, tmpColIdx);
+                tmpColIdx += 5u;
             }else if( FONT_NEXT_ROW == status )
             {
-                gdispSetPos(tmpRowIdx, tmpColIdx + (signSpan / 16u) * 5u);
+                gdispSetPos(tmpRowIdx, tmpColIdx);
+                tmpColIdx = colIdx;
                 tmpRowIdx++;
-            }
+            }else {}
+
             gdispSendDataU16(dispData);
         }
-        tmpColIdx += 1u + signSpan / 3u;
-        gdispSetPos(rowIdx, tmpColIdx);
+        
+        colIdx += 1u + signSpan / 3u;
+        gdispSetPos(rowIdx, colIdx);
     }
 }
 
