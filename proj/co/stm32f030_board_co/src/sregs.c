@@ -32,8 +32,8 @@ static uint16_t sregOutput = (SREGS_ESP_UART_EN_DEFAULT_STATE      << 15u)\
                              | (SREGS_MCU_RST_DEFAULT_STATE        << 4u)\
                              | (SREGS_FLASH_CS_DEFAULT_STATE       << 3u)\
                              | (SREGS_BOOT0_DEFAULT_STATE          << 2u)\
-                             | (SREGS_UNDEF1                       << 1u)\
-                             | (SREGS_UNDEF2                       << 0u);
+                             | (SREGS_UNDEF1_DEFAULT_STATE         << 1u)\
+                             | (SREGS_UNDEF2_DEFAULT_STATE         << 0u);
 
 void sregsInit(void)
 {
@@ -57,11 +57,10 @@ void sregsInit(void)
 
 static void sregRefresh(uint16_t outVal)
 {
-    GPIO_WriteBit(SREG_OE_RCLK_PORT, SREG_RCLK, Bit_RESET);
-
     for(uint8_t i = 0; i < SREG_OUTS; ++i)
     {
         GPIO_WriteBit(SREG_DS_CLK_PORT, SREG_CLK, Bit_RESET);
+        GPIO_WriteBit(SREG_OE_RCLK_PORT, SREG_RCLK, Bit_RESET);
 
         if( true == ((outVal >> i) & 0x01) )
         {
@@ -71,9 +70,12 @@ static void sregRefresh(uint16_t outVal)
             GPIO_WriteBit(SREG_DS_CLK_PORT, SREG_DS, Bit_RESET);
         }
         GPIO_WriteBit(SREG_DS_CLK_PORT, SREG_CLK, Bit_SET);
+        /* Prevent from uninteded pins toogling on SReg1 */
+        if( 7u <= i )
+        {
+            GPIO_WriteBit(SREG_OE_RCLK_PORT, SREG_RCLK, Bit_SET);
+        }
     }
-
-    GPIO_WriteBit(SREG_OE_RCLK_PORT, SREG_RCLK, Bit_SET);
 }
 
 void sregsGetOutput(uint8_t outputNmb, bool *state)
