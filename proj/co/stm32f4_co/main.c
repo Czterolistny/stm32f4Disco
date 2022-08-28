@@ -12,11 +12,11 @@
 #include "../../common/dbg_pin.h"
 #include "led_disp.h"
 
-#define FAN_PERC_ADDR 0x3F
-#define SET_TEMP_ADDR 0x23
-#define TEMP1_ADDR 0x1E
-#define TEMP2_ADDR 0x26
-#define EXH_TEMP_ADDR 0x42
+#define FAN_PERC_ADDR 	(0x3F)
+#define SET_TEMP_ADDR 	(0x23)
+#define TEMP1_ADDR 	(0x1E)
+#define TEMP2_ADDR 	(0x26)
+#define EXH_TEMP_ADDR 	(0x42)
 
 const uint8_t param[] = {FAN_PERC_ADDR, SET_TEMP_ADDR, TEMP1_ADDR, TEMP2_ADDR, EXH_TEMP_ADDR};
 
@@ -26,6 +26,9 @@ uint8_t *pTX_BUF = NULL;
 uint8_t rx_buf[128];
 
 volatile uint32_t msTicks;
+
+static uint16_t gCoParam[] = {0u, 0u, 0u, 0u, 0u};
+CoParamType CoParam = { .param = &gCoParam[0u], .paramNmb = sizeof(sizeof(gCoParam) / sizeof(gCoParam[0u]))};
 
 void delay_ms(uint32_t ms)
 {
@@ -141,6 +144,15 @@ void uartSend(uint8_t *tx_buf, uint8_t len)
 	USART_ITConfig(USART2, USART_IT_TXE, ENABLE);
 }
 
+static void getCoParam(volatile uint8_t * recv_buf, CoParamType *p)
+{
+	p->param[0u] = recv_buf[param[SET_TEMP]];
+	p->param[1u] = ((recv_buf[param[TEMP1]] << 8u) | recv_buf[param[TEMP1] + 1u]) / 10u;
+	p->param[2u] = ((recv_buf[param[TEMP2]] << 8u) | recv_buf[param[TEMP2] + 1u]) / 10u;
+	p->param[3u] = ((recv_buf[param[EXH_TEMP]] << 8u) | recv_buf[param[EXH_TEMP] + 1u]) / 10u;
+	p->param[4u] = recv_buf[param[FAN_PERC]];
+}
+
 void processData(uint8_t *recv_buf, uint8_t recv_len)
 {
 	ToggleTestPin1();
@@ -165,7 +177,8 @@ void processData(uint8_t *recv_buf, uint8_t recv_len)
 			default:
 				break;
 		}
-		sendToESP(recv_buf, recv_len);
+		getCoParam(&recv_buf[0], &CoParam);
+		espWrite(&CoParam);
 	}	
 	uartSend((uint8_t *) &uart_respond[0], sizeof(uart_respond));
 }

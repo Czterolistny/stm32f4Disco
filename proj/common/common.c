@@ -30,3 +30,26 @@ uint8_t _strlen(char *s)
 		len++;
 	return len;
 }
+
+uint16_t crc16calc(const char *buf, uint16_t crc, uint16_t len, uint16_t poly)
+{
+	uint16_t i, tmp_crc = crc;
+
+	while (len--)
+    {
+		tmp_crc = *buf++ << 8;
+	    crc = tmp_crc ^ crc;
+
+	    for(i = 0; i < 8; ++i)
+        {
+		    if(crc > 32767)
+			 	crc = poly ^ (crc << 1);
+            else
+			    crc = crc << 1;
+			
+			crc = crc & 0xFFFF;
+        }
+    }
+
+    return crc;
+}

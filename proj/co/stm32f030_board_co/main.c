@@ -12,7 +12,7 @@
 #include "gdisp.h"
 #include "gdispFonts.h"
 #include "../../common/common.h"
-
+#include "main.h"
 
 #define FAN_PERC_ADDR 	((uint8_t) 0x3F)
 #define SET_TEMP_ADDR 	((uint8_t) 0x23)
@@ -43,14 +43,20 @@ static void uartSend(uint8_t *tx_buf, uint8_t len);
 
 volatile uint8_t swuartBuf[32];
 volatile uint8_t swuartRxCnt;
+
+static uint16_t gCoParam[] = {0u, 0u, 0u, 0u, 0u};
+CoParamType CoParam = { .param = &gCoParam[0u], .paramNmb = sizeof(sizeof(gCoParam) / sizeof(gCoParam[0u]))};
+
 static void swuartRxByteComplete(uint8_t rxByte, uint8_t rxByteNmb)
 {
 	swuartBuf[swuartRxCnt++] = rxByte;
 }
+
 static void swuartTxComplete(uint16_t txByteNmb)
 {
 
 }
+
 static void swuartRxComplete(uint8_t rxByteNmb)
 {
 	swuartSend((uint8_t *)&swuartBuf[0], swuartRxCnt);
@@ -151,15 +157,25 @@ static void uartSend(uint8_t *tx_buf, uint8_t len)
 }
 #endif
 
+static void getCoParam(volatile uint8_t * recv_buf, CoParamType *p)
+{
+	p->param[0u] = recv_buf[param[SET_TEMP]];
+	p->param[1u] = ((recv_buf[param[TEMP1]] << 8u) | recv_buf[param[TEMP1] + 1u]) / 10u;
+	p->param[2u] = ((recv_buf[param[TEMP2]] << 8u) | recv_buf[param[TEMP2] + 1u]) / 10u;
+	p->param[3u] = ((recv_buf[param[EXH_TEMP]] << 8u) | recv_buf[param[EXH_TEMP] + 1u]) / 10u;
+	p->param[4u] = recv_buf[param[FAN_PERC]];
+}
+
 static void processData(volatile uint8_t *recv_buf, uint8_t recv_len)
 {
 	if( recv_len > 0x20 )
 	{
-		sendToESP((uint8_t*) recv_buf, recv_len);
+		getCoParam(&recv_buf[0], &CoParam);
+		espWrite(&CoParam);
 
 		writeToDisp(recv_buf[param[FAN_PERC_ADDR]], recv_buf[param[SET_TEMP_ADDR]], recv_buf[param[TEMP1_ADDR]],\
 			recv_buf[param[TEMP2_ADDR]], recv_buf[param[EXH_TEMP_ADDR]]);
-	}	
+	}
 	uartSendToCO((uint8_t *) &uart_respond[0], sizeof(uart_respond));
 }
 
