@@ -1,0 +1,7 @@
+*.o
+*.elf
+*.bin
+*.hex
+.vscode
+
+proj/co/*/binary/
