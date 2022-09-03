@@ -16,7 +16,9 @@ void i2cInit(void)
     i2c1Init();
 
     uint8_t buf[3] = {5u, 0u, 0u};
+
     i2c1Write(0xa2u, &buf[0], 0x09, 1u);
+    delay_ms(4);
     i2c1Read(0xa2u, 0x09u, &buf[0], 1u);
 }
 
@@ -66,7 +68,7 @@ static void i2c1Init(void)
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
 	
-	//I2C_ITConfig(I2C1, I2C_IT_ERR, ENABLE);
+	//I2C_ITConfig(I2C1, I2C_IT_TXIS, ENABLE);
     I2C_Cmd(I2C1, ENABLE);
 
 }
