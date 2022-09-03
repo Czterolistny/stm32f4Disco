@@ -7,10 +7,10 @@
 #include <stm32f0xx_exti.h>
 #include <stm32f0xx_syscfg.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "swuart.h"
 #include "../debugPins.h"
 
-#define NULL                    ((void*) 0u)
 #define SWUART_USE_PARITY_BITS  (false)
 
 #define swuartEXTSource EXTI4_15_IRQn
@@ -51,9 +51,9 @@ static inline void swuartInitRxAction(void);
 static inline void swuartPostRxAction(void);
 static inline void swuartRxIdleAction(void);
 
-swuartTxCompleteCallb swuartTxComplete = NULL;
-swuartRxByteCompleteCallb swuartRxByteComplete = NULL;
-swuartRxCompleteCallb swuartRxComplete = NULL;
+swUartConfigType swUartConfig = {.swuartRxOneByteCompleteClb = NULL,\
+             .swuartRxCompleteClb = NULL, .swuartTxCompleteClb = NULL};
+swUartConfigType *config = NULL;
 
 typedef union
 {
@@ -88,9 +88,9 @@ void swuartPostTxAction(void)
     TIM_SetCounter(swuartTimer, (uint32_t) 0u);
     NVIC_EnableIRQ(swuartEXTSource);
     
-    if( NULL != swuartTxComplete )
+    if( NULL != config->swuartTxCompleteClb )
     {
-        swuartTxComplete(0u);
+        config->swuartTxCompleteClb(0u);
     }
 }
 
@@ -108,9 +108,9 @@ void swuartPostRxAction(void)
     EXTI_ClearITPendingBit(swuartEXTLine);
     NVIC_EnableIRQ(swuartEXTSource);
 
-    if( NULL != swuartRxByteComplete )
+    if( NULL != config->swuartRxOneByteCompleteClb )
     {
-        swuartRxByteComplete(swuartFrame.data, 0u);
+        config->swuartRxOneByteCompleteClb(swuartFrame.data, 0u);
     }
 }
 
@@ -118,9 +118,9 @@ void swuartRxIdleAction(void)
 {
     TIM_Cmd(swuartTimer, DISABLE);
     TIM_SetCounter(swuartTimer, (uint32_t) 0u);
-    if( NULL != swuartRxComplete )
+    if( NULL != config->swuartRxCompleteClb )
     {
-        swuartRxComplete(0u);
+        config->swuartRxCompleteClb(0u);
     }
 }
 
@@ -250,16 +250,9 @@ void swuartSend(uint8_t *buf, uint8_t len)
     }
 }
 
-void swuartInit(void)
+void swuartInit(swUartConfigType *conf)
 {
+    config = conf;
     swuartPinsInit();
     swuartTimerInit();
-}
-
-void swuartInitClb(swuartTxCompleteCallb txClb, swuartRxByteCompleteCallb rxByteClb,
-            swuartRxCompleteCallb rxClb)
-{
-    swuartTxComplete = txClb;
-    swuartRxByteComplete = rxByteClb;
-    swuartRxComplete = rxClb;
 }

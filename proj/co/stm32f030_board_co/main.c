@@ -53,11 +53,17 @@ static void swuartRxComplete(uint8_t rxByteNmb)
 	swuartRxCnt = 0;
 }
 
+swUartConfigType *swConf = &swUartConfig;
+
 void swuartTest(void)
 {
 	const uint8_t buf[] = "helloSW_Uart\n";
-	swuartInit();
-	swuartInitClb(&swuartTxComplete, &swuartRxByteComplete, &swuartRxComplete);
+
+	swConf->swuartRxCompleteClb = &swuartRxComplete;
+	swConf->swuartRxOneByteCompleteClb = &swuartRxByteComplete;
+	swConf->swuartTxCompleteClb = &swuartTxComplete;
+
+	swuartInit(swConf);
 	swuartSend((uint8_t *)&buf[0], sizeof(buf)/sizeof(buf[0]));
 	for(;;);
 }
