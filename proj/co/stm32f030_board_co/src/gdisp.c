@@ -38,6 +38,8 @@
 
 #define gdispPixNmbInWord       (3u)
 
+#define gdispPixBlackPix        (0x1fu)
+
 #define gdispPORT           GPIOB
 #define gdispPinMOSI        GPIO_Pin_15
 #define gdispPinMISO        GPIO_Pin_14
@@ -190,7 +192,8 @@ static void gdispSetPixBuf(uint8_t pix, uint16_t * dispData)
     *dispData |= (gdispThirdPixIdx & pix)? gdispPix2Mask: 0u;
 }
 
-static void gdispSetGrayScale(uint8_t pix0, uint8_t pix1, uint8_t pix2, uint16_t *dispData)
+/* not exposed */
+void gdispSetGrayScale(uint8_t pix0, uint8_t pix1, uint8_t pix2, uint16_t *dispData)
 {
     *dispData = (uint16_t) (pix0 << gdispPix0Shift);
     *dispData |= (uint16_t) (( ((pix1 & 0x1Cu) >> 2u) | ((pix1 & 0x03u) << 14u)) << gdispPix1Shift);
