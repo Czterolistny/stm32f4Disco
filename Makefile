@@ -64,7 +64,7 @@ TARGETS=all clean
 default: all
 
 $(TARGETS):
-	[ -d $(COMMON_OBJ_DIR) ] || mkdir $(COMMON_OBJ_DIR)
+	@[ -d $(COMMON_OBJ_DIR) ] || mkdir $(COMMON_OBJ_DIR)
 	@for proj in $(PRJS) ; do $(MAKE) -C $(PRJ_PATH)/$$proj $@ ; done
 
 $(PRJS):

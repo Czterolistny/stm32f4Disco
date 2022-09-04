@@ -48,8 +48,8 @@ COMMON_OBJ = $(COMMON_SRC:%.c=$(COMMON_OBJ_DIR)/%.o)
 
 $(BUILD_DIR)/%.o: %.c
 	@echo [CC] $(notdir $<)
-	[ -d $(BUILD_DIR) ] || mkdir $(BUILD_DIR)
-	[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
+	@[ -d $(BUILD_DIR) ] || mkdir $(BUILD_DIR)
+	@[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
 	@$(CC) $(CFLAGS) $< -c -o $@
 
 $(COMMON_OBJ_DIR)/%.o: %.c 
