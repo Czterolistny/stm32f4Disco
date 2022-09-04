@@ -13,6 +13,8 @@
 #include "gdispFonts.h"
 #include "../../common/common.h"
 #include "main.h"
+#include "i2c.h"
+
 
 #define FAN_PERC_ADDR 	((uint8_t) 0x3F)
 #define SET_TEMP_ADDR 	((uint8_t) 0x23)
@@ -280,6 +282,8 @@ int main()
 
 	gdispInit();
 	
+	i2cInit();
+
 	for (;;){
 		if( new_frame_recived == true )
 		{
