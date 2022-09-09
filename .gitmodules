@@ -1,3 +1,6 @@
 [submodule "3rdParty/ESP8266_A"]
 	path = 3rdParty/ESP8266_A
 	url = https://github.com/espressif/ESP8266_AT
+[submodule "3rdParty/FatFs"]
+	path = 3rdParty/FatFs
+	url = https://github.com/abbrev/fatfs.git
