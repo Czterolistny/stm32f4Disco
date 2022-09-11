@@ -30,23 +30,24 @@ void SysTick_Handler()
 
 void SPI1_Write(uint8_t *bytes, uint8_t nmb)
 {
+	while(SPI_GetFlagStatus(SPI1, SPI_FLAG_BSY) == SET);
 	for(uint8_t i = 0; i<nmb; ++i)
 	{
 		SPI_SendData(SPI1, bytes[i]);
-		while(SPI_GetFlagStatus(SPI1, SPI_IT_TXE) == RESET);
-		//while(SPI_GetFlagStatus(SPI1, SPI_IT_RXNE) == RESET);
+		while(SPI_GetFlagStatus(SPI1, SPI_FLAG_TXE) == RESET){};
+		while(SPI_GetFlagStatus(SPI1, SPI_FLAG_RXNE) == RESET){};
 		(uint8_t volatile) *((__IO uint8_t *)&(SPI1->DR));
 	}
-	while(SPI_GetFlagStatus(SPI1, SPI_FLAG_BSY) == SET);
 }
 
 void SPI1_Read(uint8_t *bytes, uint8_t nmb)
 {
+	while(SPI_GetFlagStatus(SPI1, SPI_FLAG_BSY) == SET);
 	for(uint8_t i = 0; i<nmb; ++i)
 	{
 		SPI_SendData(SPI1, 0u);
-		while(SPI_GetFlagStatus(SPI1, SPI_IT_TXE) == RESET);
-		//while(SPI_GetFlagStatus(SPI1, SPI_IT_RXNE) == RESET);
+		while(SPI_GetFlagStatus(SPI1, SPI_FLAG_TXE) == RESET){};
+		while(SPI_GetFlagStatus(SPI1, SPI_FLAG_RXNE) == RESET){};
 		*(bytes++) = SPI_ReceiveData(SPI1);
 		ClearTestPin();
 	}
@@ -137,6 +138,7 @@ int main(void) {
 	SetTestPin();
 
 	uint8_t id[3u];
+
 	MX25x_Read_Ident(&id[0u]);
 	USART2_SendBlocking(&id[0u], 3u);
 	id[0] = MX25x_Read_DevID();
