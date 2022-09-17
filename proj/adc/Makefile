@@ -85,5 +85,5 @@ flash:
 	@st-flash write $(BIN_DIR)/$(TARGET).bin 0x8000000
 
 debug:
-	@$(DEFAULT_TERM) -e $(DBG_SCRIPT_DIR)/f4.sh &
+	@$(DEFAULT_TERM) -e $(DBG_SCRIPT_DIR)/stm32.sh $TARGET &
 	@$(GDB) $(BIN_DIR)/$(TARGET).elf --tui

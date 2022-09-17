@@ -121,5 +121,5 @@ flash:
 	@st-flash reset
 
 debug:
-	@$(DEFAULT_TERM) -e $(DBG_SCRIPT_DIR)/f030.sh &
+	@$(DEFAULT_TERM) -e $(DBG_SCRIPT_DIR)/stm32.sh $(TARGET) &
 	@$(GDB) $(BIN_DIR)/$(TARGET).elf -x script.gdb --tui

@@ -21,6 +21,7 @@ ASRC=startup_stm32f4xx.s
 # Project Source Files
 SRC+=main.c
 SRC+=uart.c
+SRC+=SDdrv.c
 
 # Project Source Files
 COMMON_SRC+=misc.c
@@ -87,5 +88,5 @@ flash:
 	@st-flash write $(BIN_DIR)/$(TARGET).bin 0x8000000
 	
 debug:
-	@$(DEFAULT_TERM) -e $(DBG_SCRIPT_DIR)/f4.sh &
+	@$(DEFAULT_TERM) -e $(DBG_SCRIPT_DIR)/stm32.sh $TARGET &
 	@$(GDB) $(BIN_DIR)/$(TARGET).elf --tui
