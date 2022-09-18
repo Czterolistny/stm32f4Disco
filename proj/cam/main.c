@@ -5,8 +5,8 @@
 #include "stm32f4xx_i2c.h"
 #include "stm32f4xx_spi.h"
 #include "stm32f4xx_dcmi.h"
-#include "../usart/uart.h"
-#include "../common/dbg_pin.h"
+#include "uart.h"
+#include "dbg_pin.h"
 #include <stdbool.h>
 
 volatile uint32_t msTicks = 0;

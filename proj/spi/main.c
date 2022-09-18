@@ -3,8 +3,8 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_usart.h"
 #include "stm32f4xx_spi.h"
-#include "../usart/uart.h"
-#include "../common/dbg_pin.h"
+#include "uart.h"
+#include "dbg_pin.h"
 
 #define CS_PIN GPIO_Pin_4
 #define CS_PORT GPIOA

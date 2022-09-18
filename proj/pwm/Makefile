@@ -36,12 +36,12 @@ COMMON_SRC+=stm32f4xx_usart.c
 COMMON_SRC+=stm32f4xx_rcc.c
 COMMON_SRC+=stm32f4xx_gpio.c
 
-INCLUDE+=-I$../common
-INCLUDE+=-I$../usart
+INCLUDE+=-I../common
+INCLUDE+=-I../usart
 
 MCUFLAGS+=
 COMMONFLAGS+=
-CFLAGS+=
+CFLAGS+=$(INCLUDE)
 
 LDLIBS+=
 LDFLAGS=$(MCUFLAGS) -u _scanf_float -u _printf_float -fno-exceptions -Wl,--gc-sections,-T$(LINKER_SCRIPT),-Map,$(BIN_DIR)/$(TARGET).map

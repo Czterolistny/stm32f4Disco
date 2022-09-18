@@ -3,8 +3,8 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_tim.h"
 #include "stm32f4xx_adc.h"
-#include "../usart/uart.h"
-#include "../common/dbg_pin.h"
+#include "uart.h"
+#include "dbg_pin.h"
 #include <stdlib.h>
 
 volatile uint32_t msTicks = 0;
