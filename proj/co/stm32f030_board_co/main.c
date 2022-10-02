@@ -10,6 +10,10 @@
 #include "swuart.h"
 #include "esp.h"
 #include "gdisp.h"
+#include "gdispFonts.h"
+#include "../../common/common.h"
+#include "i2c.h"
+
 
 #define FAN_PERC_ADDR 	((uint8_t) 0x3F)
 #define SET_TEMP_ADDR 	((uint8_t) 0x23)
@@ -50,7 +54,7 @@ static void swuartTxComplete(uint16_t txByteNmb)
 }
 static void swuartRxComplete(uint8_t rxByteNmb)
 {
-	//swuartSend((uint8_t *)&swuartBuf[0], swuartRxCnt);
+	swuartSend((uint8_t *)&swuartBuf[0], swuartRxCnt);
 	swuartRxCnt = 0;
 }
 
@@ -100,6 +104,36 @@ void TIM3_IRQHandler()
     }
 }
 
+const char dispConsts[5u][11u] = {{"Fan: "}, {"setTemp: "}, {"Temp1: "}, {"Temp2: "}, {"ExhTemp: "}};
+
+static void writeToDisp(uint8_t fan, uint16_t setTemp, uint16_t temp1, uint16_t temp2, uint16_t exhTemp)
+{
+	char buf[8];
+	uint8_t strLen;
+
+	gdispFontSetFontType(Font_Times_New_Roman11x12);
+
+	strLen = uint_to_string(&buf[0], (uint16_t) fan);
+	gdispWriteText((char*) &dispConsts[0u][0u], 5u, 10u, 0u);
+	gdispWriteText(&buf[0u], strLen, 10u, 20u);
+
+	strLen = uint_to_string(&buf[0], (uint16_t) setTemp);
+	gdispWriteText((char*) &dispConsts[1u][0u], 9u, 30u, 0u);
+	gdispWriteText(&buf[0u], strLen, 30u, 20u);
+
+	strLen = uint_to_string(&buf[0], (uint16_t) temp1);
+	gdispWriteText((char*) &dispConsts[2u][0u], 7u, 50u, 0u);
+	gdispWriteText(&buf[0u], strLen, 50u, 20u);
+
+	strLen = uint_to_string(&buf[0], (uint16_t) temp2);
+	gdispWriteText((char*) &dispConsts[3u][0u], 7u, 70u, 0u);
+	gdispWriteText(&buf[0u], strLen, 70u, 20u);
+
+	strLen = uint_to_string(&buf[0], (uint16_t) exhTemp);
+	gdispWriteText((char*) &dispConsts[4u][0u], 9u, 90u, 0u);
+	gdispWriteText(&buf[0u], strLen, 90u, 20u);
+}
+
 static void uartSendToCO(volatile uint8_t *tx_buf, uint8_t len)
 {
 	ptx_buf = tx_buf;
@@ -123,6 +157,9 @@ static void processData(volatile uint8_t *recv_buf, uint8_t recv_len)
 	if( recv_len > 0x20 )
 	{
 		sendToESP((uint8_t*) recv_buf, recv_len);
+
+		writeToDisp(recv_buf[param[FAN_PERC_ADDR]], recv_buf[param[SET_TEMP_ADDR]], recv_buf[param[TEMP1_ADDR]],\
+			recv_buf[param[TEMP2_ADDR]], recv_buf[param[EXH_TEMP_ADDR]]);
 	}	
 	uartSendToCO((uint8_t *) &uart_respond[0], sizeof(uart_respond));
 }
@@ -228,6 +265,8 @@ int main()
 
 	gdispInit();
 	
+	i2cInit();
+
 	for (;;){
 		if( new_frame_recived == true )
 		{
