@@ -5,6 +5,8 @@
 #include <stm32f0xx_spi.h>
 #include "stdbool.h"
 #include "gdispFonts.h"
+#include "touch.h"
+#include "../../../common/common.h"
 
 #define MSB_FIRST
 #ifdef MSB_FIRST

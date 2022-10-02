@@ -6,18 +6,18 @@
 #include "stm32f0xx_misc.h"
 #include "i2c.h"
 
-
 static void i2c1Init(void);
 static void i2c1Write(uint8_t i2c_addr, uint8_t *write_buf, uint8_t reg_addr, uint8_t size);
-static void i2c1Read(uint8_t i2c_addr, uint8_t reg_addr, uint8_t *read_buf, uint8_t size);
+static void i2c1Read(uint8_t i2c_addr, uint8_t reg_addr, uint8_t reg_addr_bytes, uint8_t *read_buf, uint8_t size);
 
 void i2cInit(void)
 {
     i2c1Init();
-
+#if(0)
     uint8_t buf[3] = {5u, 0u, 0u};
     i2c1Write(0xa2u, &buf[0], 0x09, 1u);
-    i2c1Read(0xa2u, 0x09u, &buf[0], 1u);
+    i2c1Read(0xa2u, 0x09u, 1u, &buf[0], 1u);
+#endif
 }
 
 void i2cWrite(uint8_t *buf, uint8_t len)
@@ -25,9 +25,9 @@ void i2cWrite(uint8_t *buf, uint8_t len)
     i2c1Write(buf[0], buf, buf[1], len);
 }
 
-void i2cRead(uint8_t *buf, uint8_t len)
+void i2cRead(uint8_t *buf, uint8_t reg_addr_bytes, uint8_t len)
 {
-    i2c1Read(buf[0], buf[1], buf, len);
+    i2c1Read(buf[0], buf[1], reg_addr_bytes, buf, len);
 }
 
 static void i2c1Init(void)
@@ -71,16 +71,18 @@ static void i2c1Init(void)
 
 }
 
-static void i2c1Read(uint8_t i2c_addr, uint8_t reg_addr, uint8_t *read_buf, uint8_t size)
+static void i2c1Read(uint8_t i2c_addr, uint8_t reg_addr, uint8_t reg_addr_bytes, uint8_t *read_buf, uint8_t size)
 {
     while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY) == SET);
 
-    I2C_TransferHandling(I2C1, i2c_addr, 1u, I2C_SoftEnd_Mode, I2C_Generate_Start_Write);
-    while(I2C_GetFlagStatus(I2C1, I2C_FLAG_TXIS) == RESET);
+    if( 0u != reg_addr_bytes )
+    {
+        I2C_TransferHandling(I2C1, i2c_addr, reg_addr_bytes, I2C_SoftEnd_Mode, I2C_Generate_Start_Write);
+        while(I2C_GetFlagStatus(I2C1, I2C_FLAG_TXIS) == RESET);
 
-    I2C_SendData(I2C1, reg_addr);
-    while(I2C_GetFlagStatus(I2C1, I2C_FLAG_TC) == RESET);
-
+        I2C_SendData(I2C1, reg_addr);
+        while(I2C_GetFlagStatus(I2C1, I2C_FLAG_TC) == RESET);
+    }
     I2C_TransferHandling(I2C1, i2c_addr, size, I2C_AutoEnd_Mode, I2C_Generate_Start_Read);
 
     for(uint8_t i = 0u; i < size; ++i)
