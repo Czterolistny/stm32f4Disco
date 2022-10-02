@@ -23,7 +23,11 @@
     #define gdispMaxValPixShiftByte         (gdispPixMask << 5u)
 #endif
 
-//#define BIG_ENDIAN_ORDER
+#define BIG_ENDIAN_ORDER    (false)
+
+#if (BIG_ENDIAN_ORDER == false)
+# undef BIG_ENDIAN_ORDER
+#endif
 
 #define gdispSecondPixIdx       (2u)
 
