@@ -8,7 +8,17 @@
 #include "touch.h"
 #include "../../../common/common.h"
 
-#define MSB_FIRST
+#define BIG_ENDIAN_ORDER    (false)
+#define MSB_FIRST           (true)
+
+#if (MSB_FIRST == false)
+# undef MSB_FIRST
+#endif
+
+#if (BIG_ENDIAN_ORDER == false)
+# undef BIG_ENDIAN_ORDER
+#endif
+
 #ifdef MSB_FIRST
     #define gdispPixMask                    (0xE0u)
     #define gdispIncrPixIter(pixIter)       (pixIter >> gdispPixNmbInWord)
@@ -21,12 +31,6 @@
     #define gdispFirstPixIdx                (1u)
     #define gdispThirdPixIdx                (4u)
     #define gdispMaxValPixShiftByte         (gdispPixMask << 5u)
-#endif
-
-#define BIG_ENDIAN_ORDER    (false)
-
-#if (BIG_ENDIAN_ORDER == false)
-# undef BIG_ENDIAN_ORDER
 #endif
 
 #define gdispSecondPixIdx       (2u)
@@ -53,25 +57,25 @@
 
 #define gdispPixBlackPix        (0x1fu)
 
-#define gdispPORT           GPIOB
-#define gdispPinMOSI        GPIO_Pin_15
-#define gdispPinMISO        GPIO_Pin_14
-#define gdispPinCLK         GPIO_Pin_13
-#define gdispPinCS          GPIO_Pin_12
+#define gdispPORT               (GPIOB)
+#define gdispPinMOSI            (GPIO_Pin_15)
+#define gdispPinMISO            (GPIO_Pin_14)
+#define gdispPinCLK             (GPIO_Pin_13)
+#define gdispPinCS              (GPIO_Pin_12)
 
-#define gdispPinBLigth      GPIO_Pin_0
+#define gdispPinBLigth          (GPIO_Pin_0)
 
-#define gdispSetMISO_High() gdispPORT->BSRR = gdispPinMISO;
-#define gdispSetMISO_Low()  gdispPORT->BRR = gdispPinMISO;
+#define gdispSetMISO_High()     gdispPORT->BSRR = gdispPinMISO;
+#define gdispSetMISO_Low()      gdispPORT->BRR = gdispPinMISO;
 
-#define gdispSetMOSI_High() gdispPORT->BSRR = gdispPinMOSI;
-#define gdispSetMOSI_Low()  gdispPORT->BRR = gdispPinMOSI;
+#define gdispSetMOSI_High()     gdispPORT->BSRR = gdispPinMOSI;
+#define gdispSetMOSI_Low()      gdispPORT->BRR = gdispPinMOSI;
 
-#define gdispSetCLK_High()  gdispPORT->BSRR = gdispPinCLK;
-#define gdispSetCLK_Low()   gdispPORT->BRR = gdispPinCLK;
+#define gdispSetCLK_High()      gdispPORT->BSRR = gdispPinCLK;
+#define gdispSetCLK_Low()       gdispPORT->BRR = gdispPinCLK;
 
-#define gdispSetCS_High()   gdispPORT->BSRR = gdispPinCS;
-#define gdispSetCS_Low()    gdispPORT->BRR = gdispPinCS;
+#define gdispSetCS_High()       gdispPORT->BSRR = gdispPinCS;
+#define gdispSetCS_Low()        gdispPORT->BRR = gdispPinCS;
 
 #define gdispSetMISO_CS_High()   do {\
                                     gdispSetMISO_High();\
@@ -84,11 +88,11 @@
                                 } while (0u);
 
 #define gdispSetMOSI(boolean_val) do {\
-    if(true == boolean_val) \
-        gdispSetMOSI_High()\
-    else \
-        gdispSetMOSI_Low()\
-    } while (0u);
+                                    if(true == boolean_val) \
+                                        gdispSetMOSI_High()\
+                                    else \
+                                        gdispSetMOSI_Low()\
+                                } while (0u);
 
 #define gdispSetMostLeftUpCorner()      (gdispSetPos(gdispRowMostUpCorner, gdispColMostLeftCorner))
 #define gdispSetMostLeftDownCorner()    (gdispSetPos(gdispRowMostDownCorner, gdispColMostLeftCorner))
@@ -308,6 +312,7 @@ static void gdispSetNextRow(int8_t idx)
     }
     gdispSetPos((uint8_t) tmpRow, gdispCurColId);
 }
+
 void gdispSendData(uint8_t * buf, uint8_t len)
 {
     uint16_t pixIter = gdispPixMask;
