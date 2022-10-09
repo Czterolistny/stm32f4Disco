@@ -422,6 +422,24 @@ void gdispDispCalibPoints(void)
     }
 }
 
+void gdispDrawItem(uint8_t *item, uint8_t ypos, uint8_t xpos, uint8_t yPixlen, uint8_t xPixlen)
+{
+    uint8_t byteRowCnt = (uint8_t)(xPixlen / 8u) + ((xPixlen % 8u)? 1u: 0u);
+    uint16_t itemBytes = (byteRowCnt * yPixlen);
+    gdispSetPos(ypos, xpos);
+    for(uint16_t byteCnt = 0u; byteCnt < itemBytes; ++byteCnt)
+    {
+        gdispSendData(item++, 1u);
+        if( 0u == (byteCnt % byteRowCnt) )
+        {
+            if( (0u != byteCnt) || ( 1u == itemBytes) )
+            {
+                gdispSetNextRow(1);
+            }
+        }
+    }
+}
+
 void gdispInit(void)
 {
     gdispSPI_Init();
