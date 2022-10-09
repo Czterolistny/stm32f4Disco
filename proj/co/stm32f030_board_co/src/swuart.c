@@ -7,32 +7,31 @@
 #include <stm32f0xx_exti.h>
 #include <stm32f0xx_syscfg.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include "swuart.h"
 #include "../debugPins.h"
 
-#define NULL                    ((void*) 0u)
 #define SWUART_USE_PARITY_BITS  (false)
 
 #define swuartEXTSource EXTI4_15_IRQn
-#define swuartEXTLine   EXTI_Line11
+#define swuartEXTLine   EXTI_Line7
 #define swuartTimer     TIM14
-#define swuartTxPin     GPIO_Pin_4
-#define swuartRxPin     GPIO_Pin_11
-#define swuartGPIO      GPIOA
+#define swuartTxPin     GPIO_Pin_6
+#define swuartRxPin     GPIO_Pin_7
 
 #define swuartSetTxLine(boolean_val) do {\
-    if(true == boolean_val) GPIO_WriteBit(swuartGPIO, swuartTxPin, Bit_SET);\
-    else GPIO_WriteBit(swuartGPIO, swuartTxPin, Bit_RESET);\
+    if(true == boolean_val) GPIO_WriteBit(GPIOB, swuartTxPin, Bit_SET);\
+    else GPIO_WriteBit(GPIOB, swuartTxPin, Bit_RESET);\
     } while (0u);
 
-#define swuartReadtxLine()  GPIO_ReadInputDataBit(swuartGPIO, swuartRxPin)
+#define swuartReadtxLine()  GPIO_ReadInputDataBit(GPIOB, swuartRxPin)
 #define swuartIsTxMode()    (0u != swuartTxLen)
 
 #define swuartTimerPresc          (4u)
 #define swuartBitPeriodTimVal     (125u)
 #define swuartPeriodCorrection    (swuartTimerPresc * 15u)
 #define swuartHalfBitPeriodTimVal ((swuartBitPeriodTimVal / 2u) + swuartPeriodCorrection)
-#define swuartTxBufSize           (64u)
+#define swuartTxBufSize           (32u)
 #define swuartMaxBitInByteShift   (7u)
 #define swuartBitInFrame          (10u)
 #define swuartStartBitIdx         (0u)
@@ -52,9 +51,9 @@ static inline void swuartInitRxAction(void);
 static inline void swuartPostRxAction(void);
 static inline void swuartRxIdleAction(void);
 
-swuartTxCompleteCallb swuartTxComplete = NULL;
-swuartRxByteCompleteCallb swuartRxByteComplete = NULL;
-swuartRxCompleteCallb swuartRxComplete = NULL;
+swUartConfigType swUartConfig = {.swuartRxOneByteCompleteClb = NULL,\
+             .swuartRxCompleteClb = NULL, .swuartTxCompleteClb = NULL};
+swUartConfigType *config = NULL;
 
 typedef union
 {
@@ -71,7 +70,7 @@ typedef union
 }swuartFrame_t;
 swuartFrame_t swuartFrame = {.startBit = 0u, .stopBits = 1u};
 
-static void swuartInitTxAction(void)
+void swuartInitTxAction(void)
 {
     swuartFrame.startBit = 0u;
     swuartFrame.stopBits = 1u;
@@ -82,20 +81,20 @@ static void swuartInitTxAction(void)
     TIM_Cmd(swuartTimer, ENABLE);
 }
 
-static void swuartPostTxAction(void)
+void swuartPostTxAction(void)
 {
     swuartTxLen = 0u;
     TIM_Cmd(swuartTimer, DISABLE);
     TIM_SetCounter(swuartTimer, (uint32_t) 0u);
     NVIC_EnableIRQ(swuartEXTSource);
     
-    if( NULL != swuartTxComplete )
+    if( NULL != config->swuartTxCompleteClb )
     {
-        swuartTxComplete(0u);
+        config->swuartTxCompleteClb(0u);
     }
 }
 
-static void swuartInitRxAction(void)
+void swuartInitRxAction(void)
 {
     TIM_SetCounter(swuartTimer, (uint32_t) swuartHalfBitPeriodTimVal);
 	TIM_Cmd(swuartTimer, ENABLE);
@@ -104,24 +103,24 @@ static void swuartInitRxAction(void)
     swuartBitInFrameIdx = 0u;
 }
 
-static void swuartPostRxAction(void)
+void swuartPostRxAction(void)
 {
     EXTI_ClearITPendingBit(swuartEXTLine);
     NVIC_EnableIRQ(swuartEXTSource);
 
-    if( NULL != swuartRxByteComplete )
+    if( NULL != config->swuartRxOneByteCompleteClb )
     {
-        swuartRxByteComplete(swuartFrame.data, 0u);
+        config->swuartRxOneByteCompleteClb(swuartFrame.data, 0u);
     }
 }
 
-static void swuartRxIdleAction(void)
+void swuartRxIdleAction(void)
 {
     TIM_Cmd(swuartTimer, DISABLE);
     TIM_SetCounter(swuartTimer, (uint32_t) 0u);
-    if( NULL != swuartRxComplete )
+    if( NULL != config->swuartRxCompleteClb )
     {
-        swuartRxComplete(0u);
+        config->swuartRxCompleteClb(0u);
     }
 }
 
@@ -133,7 +132,7 @@ void TIM14_IRQHandler()
         {
             if( swuartTxLen != swuartTxByteIdx )
             {
-    	        swuartSetTxLine( ((swuartFrame.frame & (1u << swuartBitInFrameIdx)) > 0u) );
+    	        swuartSetTxLine( ((swuartFrame.frame & (1 << swuartBitInFrameIdx)) > 0u) );
                 if( (swuartBitInFrame - 1u) == swuartBitInFrameIdx )
                 {
                     swuartBitInFrameIdx = 0u;
@@ -144,7 +143,7 @@ void TIM14_IRQHandler()
                 }
             }else
             {
-                swuartTxByteIdx = 0u;
+                swuartTxByteIdx = 0;
                 swuartPostTxAction();
             }
         }else
@@ -181,7 +180,7 @@ static void swuartTimerInit(void)
 	/* 1/(115200) Timer */
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct;
     TIM_TimeBaseInitStruct.TIM_Prescaler = swuartTimerPresc;
-    TIM_TimeBaseInitStruct.TIM_Period = (swuartBitPeriodTimVal - 1u);
+    TIM_TimeBaseInitStruct.TIM_Period = (swuartBitPeriodTimVal - 1);
     TIM_TimeBaseInitStruct.TIM_ClockDivision = TIM_CKD_DIV1;
     TIM_TimeBaseInitStruct.TIM_CounterMode = TIM_CounterMode_Up;
 
@@ -189,7 +188,7 @@ static void swuartTimerInit(void)
 
     NVIC_InitTypeDef NVIC_InitStruct;
     NVIC_InitStruct.NVIC_IRQChannel = TIM14_IRQn;
-    NVIC_InitStruct.NVIC_IRQChannelPriority = 0u;
+    NVIC_InitStruct.NVIC_IRQChannelPriority = 0;
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
 	
@@ -200,25 +199,25 @@ static void swuartTimerInit(void)
 static void swuartPinsInit(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct;
-    RCC_AHBPeriphClockCmd(RCC_AHBENR_GPIOAEN, ENABLE);
+    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
 
     /* To preserve GND-pulse after initialization */
-    GPIO_WriteBit(swuartGPIO, swuartTxPin, Bit_SET);
+    GPIO_WriteBit(GPIOB, swuartTxPin, Bit_SET);
 
     GPIO_InitStruct.GPIO_Pin = swuartTxPin;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(swuartGPIO, &GPIO_InitStruct);
+    GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     GPIO_InitStruct.GPIO_Pin = swuartRxPin;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
     GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
-    GPIO_Init(swuartGPIO, &GPIO_InitStruct);
+    GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource11);
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, EXTI_PinSource7);
 
 	EXTI_InitTypeDef EXTI_InitStruct;
 	EXTI_InitStruct.EXTI_Line = swuartEXTLine;
@@ -229,7 +228,7 @@ static void swuartPinsInit(void)
 	
     NVIC_InitTypeDef NVIC_InitStruct;
 	NVIC_InitStruct.NVIC_IRQChannel = swuartEXTSource;
-    NVIC_InitStruct.NVIC_IRQChannelPriority = 1u;/*1u < TIM16 Irq!*/
+    NVIC_InitStruct.NVIC_IRQChannelPriority = 0x00;
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
 }
@@ -238,8 +237,7 @@ void swuartSend(uint8_t *buf, uint8_t len)
 {
     if(swuartTxBufSize >= len)
     {
-        while( true == swuartIsTxMode() );
-        for(uint8_t i = 0u; i < len; ++i)
+        for(uint8_t i = 0; i < len; ++i)
         {
             swuartTxBuf[i] = buf[i];
         }
@@ -252,16 +250,9 @@ void swuartSend(uint8_t *buf, uint8_t len)
     }
 }
 
-void swuartInit(void)
+void swuartInit(swUartConfigType *conf)
 {
+    config = conf;
     swuartPinsInit();
     swuartTimerInit();
-}
-
-void swuartInitClb(swuartTxCompleteCallb txClb, swuartRxByteCompleteCallb rxByteClb,
-            swuartRxCompleteCallb rxClb)
-{
-    swuartTxComplete = txClb;
-    swuartRxByteComplete = rxByteClb;
-    swuartRxComplete = rxClb;
 }

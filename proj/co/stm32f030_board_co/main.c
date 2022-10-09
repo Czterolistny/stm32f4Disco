@@ -8,11 +8,7 @@
 #include "sregs.h"
 #include "debugPins.h"
 #include "swuart.h"
-#include "esp.h"
-#include "gdisp.h"
-#include "gdispFonts.h"
-#include "../../common/common.h"
-#include "main.h"
+//#include "esp.h"
 
 #define FAN_PERC_ADDR 	((uint8_t) 0x3F)
 #define SET_TEMP_ADDR 	((uint8_t) 0x23)
@@ -43,31 +39,31 @@ static void uartSend(uint8_t *tx_buf, uint8_t len);
 
 volatile uint8_t swuartBuf[32];
 volatile uint8_t swuartRxCnt;
-
-static uint16_t gCoParam[] = {0u, 0u, 0u, 0u, 0u};
-CoParamType CoParam = { .param = &gCoParam[0u], .paramNmb = sizeof(sizeof(gCoParam) / sizeof(gCoParam[0u]))};
-
 static void swuartRxByteComplete(uint8_t rxByte, uint8_t rxByteNmb)
 {
 	swuartBuf[swuartRxCnt++] = rxByte;
 }
-
 static void swuartTxComplete(uint16_t txByteNmb)
 {
 
 }
-
 static void swuartRxComplete(uint8_t rxByteNmb)
 {
 	swuartSend((uint8_t *)&swuartBuf[0], swuartRxCnt);
 	swuartRxCnt = 0;
 }
 
+swUartConfigType *swConf = &swUartConfig;
+
 void swuartTest(void)
 {
 	const uint8_t buf[] = "helloSW_Uart\n";
-	swuartInit();
-	swuartInitClb(&swuartTxComplete, &swuartRxByteComplete, &swuartRxComplete);
+
+	swConf->swuartRxCompleteClb = &swuartRxComplete;
+	swConf->swuartRxOneByteCompleteClb = &swuartRxByteComplete;
+	swConf->swuartTxCompleteClb = &swuartTxComplete;
+
+	swuartInit(swConf);
 	swuartSend((uint8_t *)&buf[0], sizeof(buf)/sizeof(buf[0]));
 	for(;;);
 }
@@ -109,36 +105,6 @@ void TIM3_IRQHandler()
     }
 }
 
-const char dispConsts[5u][11u] = {{"Fan: "}, {"setTemp: "}, {"Temp1: "}, {"Temp2: "}, {"ExhTemp: "}};
-
-static void writeToDisp(uint8_t fan, uint16_t setTemp, uint16_t temp1, uint16_t temp2, uint16_t exhTemp)
-{
-	char buf[8];
-	uint8_t strLen;
-
-	gdispFontSetFontType(Font_Times_New_Roman11x12);
-
-	strLen = uint_to_string(&buf[0], (uint16_t) fan);
-	gdispWriteText((char*) &dispConsts[0u][0u], 5u, 10u, 0u);
-	gdispWriteText(&buf[0u], strLen, 10u, 20u);
-
-	strLen = uint_to_string(&buf[0], (uint16_t) setTemp);
-	gdispWriteText((char*) &dispConsts[1u][0u], 9u, 30u, 0u);
-	gdispWriteText(&buf[0u], strLen, 30u, 20u);
-
-	strLen = uint_to_string(&buf[0], (uint16_t) temp1);
-	gdispWriteText((char*) &dispConsts[2u][0u], 7u, 50u, 0u);
-	gdispWriteText(&buf[0u], strLen, 50u, 20u);
-
-	strLen = uint_to_string(&buf[0], (uint16_t) temp2);
-	gdispWriteText((char*) &dispConsts[3u][0u], 7u, 70u, 0u);
-	gdispWriteText(&buf[0u], strLen, 70u, 20u);
-
-	strLen = uint_to_string(&buf[0], (uint16_t) exhTemp);
-	gdispWriteText((char*) &dispConsts[4u][0u], 9u, 90u, 0u);
-	gdispWriteText(&buf[0u], strLen, 90u, 20u);
-}
-
 static void uartSendToCO(volatile uint8_t *tx_buf, uint8_t len)
 {
 	ptx_buf = tx_buf;
@@ -157,25 +123,12 @@ static void uartSend(uint8_t *tx_buf, uint8_t len)
 }
 #endif
 
-static void getCoParam(volatile uint8_t * recv_buf, CoParamType *p)
-{
-	p->param[0u] = recv_buf[param[SET_TEMP]];
-	p->param[1u] = ((recv_buf[param[TEMP1]] << 8u) | recv_buf[param[TEMP1] + 1u]) / 10u;
-	p->param[2u] = ((recv_buf[param[TEMP2]] << 8u) | recv_buf[param[TEMP2] + 1u]) / 10u;
-	p->param[3u] = ((recv_buf[param[EXH_TEMP]] << 8u) | recv_buf[param[EXH_TEMP] + 1u]) / 10u;
-	p->param[4u] = recv_buf[param[FAN_PERC]];
-}
-
 static void processData(volatile uint8_t *recv_buf, uint8_t recv_len)
 {
 	if( recv_len > 0x20 )
 	{
-		getCoParam(&recv_buf[0], &CoParam);
-		espWrite(&CoParam);
-
-		writeToDisp(recv_buf[param[FAN_PERC_ADDR]], recv_buf[param[SET_TEMP_ADDR]], recv_buf[param[TEMP1_ADDR]],\
-			recv_buf[param[TEMP2_ADDR]], recv_buf[param[EXH_TEMP_ADDR]]);
-	}
+		//sendToESP((uint8_t*) recv_buf, recv_len);
+	}	
 	uartSendToCO((uint8_t *) &uart_respond[0], sizeof(uart_respond));
 }
 
@@ -255,13 +208,6 @@ void SysTick_Handler()
 	msTicks++;
 }
 
-void initESP(void)
-{
-	static espConfig esp_conf;
-	esp_conf.espWriteATCommand = &swuartSend;
-	espInit(&esp_conf);
-}
-
 int main()
 {
 	SystemInit();
@@ -269,17 +215,14 @@ int main()
 
 	initTestPin();
 
+	/* SW uart test - never return function */
+	swuartTest();
+
 	InitUsart1();
 	TIM3_Init();
 
-	swuartInit();
-	//swuartInitClb(&swuartTxComplete, &swuartRxByteComplete, &swuartRxComplete);
-	
 	sregsInit();
-	initESP();
 
-	gdispInit();
-	
 	for (;;){
 		if( new_frame_recived == true )
 		{
