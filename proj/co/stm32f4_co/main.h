@@ -10,7 +10,7 @@
 void delay_ms(uint32_t ms);
 
 typedef struct{
-	uint16_t *param;
+	volatile uint16_t *param;
 	const uint8_t paramNmb;
 }CoParamType;
 

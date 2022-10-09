@@ -8,6 +8,6 @@ typedef struct {
 }espConfig;
 
 void espInit(espConfig *config);
-void espWrite(CoParamType *p);
+void espWrite(const CoParamType *p);
 
 #endif

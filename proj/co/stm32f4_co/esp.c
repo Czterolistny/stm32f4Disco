@@ -45,7 +45,7 @@ static uint16_t espGetCRC(char *buf, uint8_t len)
 	return crc16calc(&buf[0], crc16, len, ESP_CRC_POLY);
 }
 
-void espWrite(CoParamType *p)
+void espWrite(const CoParamType *p)
 {
 	char udp_buf[32];
 	char crc16_str[5] = {0};

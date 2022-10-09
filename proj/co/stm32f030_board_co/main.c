@@ -16,23 +16,36 @@
 #include "i2c.h"
 
 
-#define FAN_PERC_ADDR 	((uint8_t) 0x3F)
-#define SET_TEMP_ADDR 	((uint8_t) 0x23)
-#define TEMP1_ADDR 		((uint8_t) 0x1E)
-#define TEMP2_ADDR 		((uint8_t) 0x26)
-#define EXH_TEMP_ADDR 	((uint8_t) 0x42)
+#define PARAM_FAN_PERC_IDX 		((uint8_t) 0x3Fu)
+#define PARAM_SET_TEMP_IDX 		((uint8_t) 0x23u)
+#define PARAM_TEMP1_IDX 		((uint8_t) 0x1Eu)
+#define PARAM_TEMP2_IDX 		((uint8_t) 0x26u)
+#define PARAM_EXH_TEMP_IDX 		((uint8_t) 0x42u)
 
-#define NULL ((void*)0) 
+#define PARAM_CNT		((uint8_t) 0x05u)
 
-const uint8_t param[] = {FAN_PERC_ADDR, SET_TEMP_ADDR, TEMP1_ADDR, TEMP2_ADDR, EXH_TEMP_ADDR};
+#define CO_CONST_RESP	{(uint8_t) 0x02u, (uint8_t) 0x26u, (uint8_t) 0xffu, (uint8_t) 0xf4u, (uint8_t) 0x16u, (uint8_t) 0xf9u, (uint8_t) 0x00u, \
+						(uint8_t) 0x01u, (uint8_t) 0x16u, (uint8_t) 0xc2u, (uint8_t) 0x00u, (uint8_t) 0x00u, (uint8_t) 0x16u, (uint8_t) 0xf9u, \
+						(uint8_t) 0x00u, (uint8_t) 0x00u, (uint8_t) 0x16u, (uint8_t) 0xf9u, (uint8_t) 0x00u, (uint8_t) 0x02u, (uint8_t) 0x16u, \
+						(uint8_t) 0xc2u, (uint8_t) 0x00u, (uint8_t) 0x00u, (uint8_t) 0x16u, (uint8_t) 0xf9u, (uint8_t) 0x00u, (uint8_t) 0x00u, \
+						(uint8_t) 0x02u, (uint8_t) 0x18u, (uint8_t) 0x2cu, (uint8_t) 0x11u}
 
-static const uint8_t uart_respond[] = {0x02, 0x26, 0xff, 0xf4, 0x16, 0xf9, 0x00, 0x01, 0x16, 0xc2, 0x00, 0x00, 0x16, 0xf9, 0x00, 0x00,
-								0x16, 0xf9, 0x00, 0x02, 0x16, 0xc2, 0x00, 0x00, 0x16, 0xf9, 0x00, 0x00, 0x02, 0x18, 0x2c, 0x11};
+#define CO_CONST_RESP_LEN	((uint8_t) 32u)
+
+#define STR_FAN			"Fan: "
+#define STR_SET_TEMP	"setTemp: "
+#define STR_TEMP1		"Temp1: "
+#define STR_TEMP2		"Temp2: "
+#define STR_EXH_TEMP	"ExhTemp: "
+
+#define getStrLen(str) (uint8_t)(sizeof(str)/sizeof(char))
+
+#define getArrRef(arr) (&arr[0u])
+
+#define NULL ((void*)0)
 
 volatile static uint8_t *ptx_buf = NULL;
-volatile static uint8_t rx_buf[128];
 
-volatile bool new_frame_recived = false;
 volatile uint8_t rx_cnt;
 volatile uint8_t tx_cnt;
 
@@ -45,6 +58,45 @@ static void uartSend(uint8_t *tx_buf, uint8_t len);
 
 volatile uint8_t swuartBuf[32];
 volatile uint8_t swuartRxCnt;
+
+typedef struct{
+	volatile uint8_t uart_req[128u];
+	const uint8_t uart_response[CO_CONST_RESP_LEN];
+	const uint8_t response_len;
+	const uint8_t param_idxs[PARAM_CNT];
+	volatile bool req_ready;
+	const CoParamType *mesure_param;
+}CoControlCtx;
+
+static volatile uint16_t gCoParam[PARAM_CNT];
+const CoParamType CoParam = { .param = getArrRef(gCoParam), .paramNmb = sizeof(sizeof(gCoParam) / sizeof(gCoParam[0u]))};
+
+CoControlCtx ControlCtx = { .param_idxs = {PARAM_FAN_PERC_IDX, PARAM_SET_TEMP_IDX, PARAM_TEMP1_IDX, PARAM_TEMP2_IDX, PARAM_EXH_TEMP_IDX}, \
+							.uart_response = CO_CONST_RESP, .response_len = CO_CONST_RESP_LEN, .req_ready = false, .mesure_param = &CoParam};
+
+typedef struct{
+	volatile uint16_t const *val;
+	struct{
+		const char * const name;
+		char len;
+	};
+	uint8_t xpos;
+	uint8_t ypos;
+}CoDispParam;
+
+typedef struct{
+	CoDispParam *dispParam;
+	uint8_t paramCnt;
+}CoDispCtx;
+
+CoDispParam dispParam[PARAM_CNT] = {{.name = STR_FAN, .len = getStrLen(STR_FAN), .val = &gCoParam[0u], .xpos = 0u, .ypos = 10u},
+						 {.name = STR_SET_TEMP, .len = getStrLen(STR_SET_TEMP), .val = &gCoParam[1u], .xpos = 0u, .ypos = 30u},
+						 {.name = STR_TEMP1, .len = getStrLen(STR_TEMP1), .val = &gCoParam[2u], .xpos = 0u, .ypos = 50u},
+						 {.name = STR_TEMP2, .len = getStrLen(STR_TEMP2), .val = &gCoParam[3u], .xpos = 0u, .ypos = 70u},
+						 {.name = STR_EXH_TEMP, .len = getStrLen(STR_EXH_TEMP), .val = &gCoParam[4u], .xpos = 0u, .ypos = 90u}};
+
+CoDispCtx dispCtx = {.dispParam = getArrRef(dispParam), .paramCnt = PARAM_CNT};
+
 static void swuartRxByteComplete(uint8_t rxByte, uint8_t rxByteNmb)
 {
 	swuartBuf[swuartRxCnt++] = rxByte;
@@ -55,7 +107,7 @@ static void swuartTxComplete(uint16_t txByteNmb)
 }
 static void swuartRxComplete(uint8_t rxByteNmb)
 {
-	swuartSend((uint8_t *)&swuartBuf[0], swuartRxCnt);
+	swuartSend((uint8_t*) getArrRef(swuartBuf), swuartRxCnt);
 	swuartRxCnt = 0;
 }
 
@@ -79,7 +131,7 @@ void USART1_IRQHandler(void)
     if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
     {
 		USART_ClearFlag(USART1, USART_IT_RXNE);
-		rx_buf[rx_cnt++] = (uint8_t) USART_ReceiveData(USART1);
+		ControlCtx.uart_req[rx_cnt++] = (uint8_t) USART_ReceiveData(USART1);
 
 		TIM_SetCounter(TIM3, (uint32_t) 0);
 		if( TIM_GetITStatus(TIM3, TIM_IT_Update) == RESET )
@@ -92,7 +144,7 @@ void USART1_IRQHandler(void)
 		static uint8_t txed_cnt;
 		if(txed_cnt != tx_cnt)
 		{
-			USART_SendData(USART1, ptx_buf[txed_cnt++]);
+			USART_SendData(USART1, ControlCtx.uart_response[txed_cnt++]);
 		}else {
 			USART_ITConfig(USART1, USART_IT_TXE, DISABLE);
 			txed_cnt = 0;
@@ -105,16 +157,32 @@ void TIM3_IRQHandler()
 {
     if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)
     {
-		new_frame_recived = true;
+		ControlCtx.req_ready = true;
 		TIM_ITConfig(TIM3, TIM_IT_Update, DISABLE);
 		TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
     }
 }
 
-static void uartSendToCO(volatile uint8_t *tx_buf, uint8_t len)
+static void writeToDisp(CoDispCtx *dispCtx)
 {
-	ptx_buf = tx_buf;
-	tx_cnt = len;
+	char buf[8];
+	uint8_t strLen;
+
+	gdispFontSetFontType(Font_Times_New_Roman11x12);
+
+	for(uint8_t ctx = 0u; ctx < dispCtx->paramCnt; ++ctx)
+	{
+		strLen = uint_to_string(getArrRef(buf), (uint16_t) *dispCtx->dispParam[ctx].val);
+		gdispWriteText((char*) dispCtx->dispParam[ctx].name, dispCtx->dispParam[ctx].len,\
+		 dispCtx->dispParam[ctx].ypos, dispCtx->dispParam[ctx].xpos);
+		gdispWriteText(getArrRef(buf), strLen, dispCtx->dispParam[ctx].ypos, 20u);
+	}
+}
+
+static void uartSendToCO(CoControlCtx *ctx)
+{
+	ptx_buf = (uint8_t*) ctx->uart_response;
+	tx_cnt = ctx->response_len;
 	USART_ITConfig(USART1, USART_IT_TXE, ENABLE);
 }
 
@@ -129,13 +197,27 @@ static void uartSend(uint8_t *tx_buf, uint8_t len)
 }
 #endif
 
-static void processData(volatile uint8_t *recv_buf, uint8_t recv_len)
+static void updateCoParam(CoControlCtx *ctx)
+{	
+	uint16_t *param = (uint16_t*) ctx->mesure_param->param;
+	uint8_t *req_buf = (uint8_t*) getArrRef(ctx->uart_req);
+	param[0u] = req_buf[ctx->param_idxs[SET_TEMP]];
+	param[1u] = ((req_buf[ctx->param_idxs[TEMP1]] << 8u) | req_buf[ctx->param_idxs[TEMP1] + 1u]) / 10u;
+	param[2u] = ((req_buf[ctx->param_idxs[TEMP2]] << 8u) | req_buf[ctx->param_idxs[TEMP2] + 1u]) / 10u;
+	param[3u] = ((req_buf[ctx->param_idxs[EXH_TEMP]] << 8u) | req_buf[ctx->param_idxs[EXH_TEMP] + 1u]) / 10u;
+	param[4u] = req_buf[ctx->param_idxs[FAN_PERC]];
+}
+
+static void processData(CoControlCtx *ctx, uint8_t recv_len)
 {
 	if( recv_len > 0x20 )
 	{
-		//sendToESP((uint8_t*) recv_buf, recv_len);
-	}	
-	uartSendToCO((uint8_t *) &uart_respond[0], sizeof(uart_respond));
+		updateCoParam(ctx);
+		espWrite(ctx->mesure_param);
+
+		writeToDisp(&dispCtx);
+	}
+	uartSendToCO(ctx);
 }
 
 static void TIM3_Init()
@@ -214,6 +296,25 @@ void SysTick_Handler()
 	msTicks++;
 }
 
+void initESP(void)
+{
+	static espConfig esp_conf;
+	esp_conf.espWriteATCommand = &swuartSend;
+	espInit(&esp_conf);
+}
+
+__attribute__((noreturn)) void runCoProcEngine(CoControlCtx *ctx) 
+{
+	for (;;){
+		if( true == ctx->req_ready )
+		{
+			processData(ctx, rx_cnt);
+			rx_cnt = 0;
+			ctx->req_ready = false;
+		}
+	};
+}
+
 int main()
 {
 	SystemInit();
@@ -228,17 +329,11 @@ int main()
 	TIM3_Init();
 
 	sregsInit();
-
+	initESP();
 	gdispInit();
 	
 	i2cInit();
 
-	for (;;){
-		if( new_frame_recived == true )
-		{
-			processData(&rx_buf[0], rx_cnt);
-			rx_cnt = 0;
-			new_frame_recived = false;
-		}
-	};
+	/* never returns */
+	runCoProcEngine(&ControlCtx);
 }
