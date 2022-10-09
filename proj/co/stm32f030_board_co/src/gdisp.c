@@ -38,6 +38,8 @@
 
 #define gdispPixNmbInWord       (3u)
 
+#define gdispPixBlackPix        (0x1fu)
+
 #define gdispPORT           GPIOB
 #define gdispPinMOSI        GPIO_Pin_15
 #define gdispPinMISO        GPIO_Pin_14
@@ -190,7 +192,8 @@ static void gdispSetPixBuf(uint8_t pix, uint16_t * dispData)
     *dispData |= (gdispThirdPixIdx & pix)? gdispPix2Mask: 0u;
 }
 
-static void gdispSetGrayScale(uint8_t pix0, uint8_t pix1, uint8_t pix2, uint16_t *dispData)
+/* not exposed */
+void gdispSetGrayScale(uint8_t pix0, uint8_t pix1, uint8_t pix2, uint16_t *dispData)
 {
     *dispData = (uint16_t) (pix0 << gdispPix0Shift);
     *dispData |= (uint16_t) (( ((pix1 & 0x1Cu) >> 2u) | ((pix1 & 0x03u) << 14u)) << gdispPix1Shift);
@@ -309,12 +312,11 @@ void gdispSendData(uint8_t * buf, uint8_t len)
 
 void gdispWriteText(char * text, uint8_t len, uint8_t rowIdx, uint8_t colIdx)
 {
+    uint16_t dispData = 0u;
     uint8_t signSpan;
     FontStatus status;
-    uint8_t tmpRowIdx;
-    uint8_t wordRest;
+    uint8_t tmpRowIdx = rowIdx;
     uint8_t tmpColIdx = colIdx;
-    uint16_t dispData = 0u;
 
     gdispSetPos(rowIdx, colIdx);
     for(uint8_t i = 0u; i < len; ++i)
@@ -328,19 +330,15 @@ void gdispWriteText(char * text, uint8_t len, uint8_t rowIdx, uint8_t colIdx)
             if( FONT_NEXT_COLUMN == status )
             {
                 gdispSetPos(tmpRowIdx, tmpColIdx);
-                tmpColIdx += 5u;
             }else if( FONT_NEXT_ROW == status )
             {
-                gdispSetPos(tmpRowIdx, tmpColIdx);
-                tmpColIdx = colIdx;
+                gdispSetPos(tmpRowIdx, tmpColIdx + (signSpan / 16u) * 5u);
                 tmpRowIdx++;
-            }else {}
-
+            }
             gdispSendDataU16(dispData);
         }
-        
-        colIdx += 1u + signSpan / 3u;
-        gdispSetPos(rowIdx, colIdx);
+        tmpColIdx += 1u + signSpan / 3u;
+        gdispSetPos(rowIdx, tmpColIdx);
     }
 }
 
@@ -353,4 +351,11 @@ void gdispInit(void)
     gdispSendCmd((uint8_t *) &gdispInitBuf[0], sizeof(gdispInitBuf)/sizeof(gdispInitBuf[0]));
     
     gdispClearDisp();
+
+    char str[] = "Makis Wapis 23059";
+    gdispFontSetFontType(Font_Times_New_Roman11x12);
+    gdispWriteText(&str[0], 21u, 0u, 0u);
+
+    gdispFontSetFontType(Font_Times_New_Roman23x22);
+    gdispWriteText(&str[0], 16u, 10u, 0u);
 }

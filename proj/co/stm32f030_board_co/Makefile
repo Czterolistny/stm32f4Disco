@@ -27,6 +27,8 @@ SRC+=swuart.c
 SRC+=esp.c
 SRC+=gdisp.c
 SRC+=gdispFonts.c
+SRC+=i2c.c
+SRC+=flash.c
 
 # Project Source Files
 COMMON_SRC+=stm32f0xx_it.c
@@ -41,6 +43,8 @@ COMMON_SRC+=stm32f0xx_usart.c
 COMMON_SRC+=stm32f0xx_rcc.c
 COMMON_SRC+=stm32f0xx_gpio.c
 COMMON_SRC+=stm32f0xx_exti.c
+COMMON_SRC+=stm32f0xx_i2c.c
+COMMON_SRC+=stm32f0xx_spi.c
 
 # Standard Peripheral Header Files
 INCLUDE+=-I$(CURDIR)/../../../Libraries/CMSIS/Device/ST/STM32F0xx/Include
@@ -80,8 +84,8 @@ COMMON_OBJ = $(COMMON_SRC:%.c=$(COMMON_OBJ_DIR)/%.o)
 
 $(BUILD_DIR)/%.o: %.c
 	@echo [CC] $(notdir $<)
-	[ -d $(BUILD_DIR) ] || mkdir $(BUILD_DIR)
-	[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
+	@[ -d $(BUILD_DIR) ] || mkdir $(BUILD_DIR)
+	@[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
 	@$(CC) $(CFLAGS) $< -c -o $@
 
 $(COMMON_OBJ_DIR)/%.o: %.c 
@@ -115,3 +119,7 @@ clean_common:
 flash:
 	@st-flash write $(BIN_DIR)/$(TARGET).bin 0x8000000
 	@st-flash reset
+
+debug:
+	@$(DEFAULT_TERM) -e $(DBG_SCRIPT_DIR)/stm32.sh $(TARGET) &
+	@$(GDB) $(BIN_DIR)/$(TARGET).elf -x script.gdb --tui

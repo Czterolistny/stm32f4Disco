@@ -34,6 +34,8 @@ INCLUDE+=-I$(CURDIR)/Libraries/CMSIS/Include
 INCLUDE+=-I$(CURDIR)/Libraries/STM32F4xx_StdPeriph_Driver/inc
 INCLUDE+=-I$(CURDIR)/config
 
+export DBG_SCRIPT_DIR:=$(CURDIR)
+export DEFAULT_TERM:=konsole
 
 HSE_CLK?=-DHSE_VALUE=8000000
 CPU_CORE:=cortex-m4
@@ -62,7 +64,7 @@ TARGETS=all clean
 default: all
 
 $(TARGETS):
-	[ -d $(COMMON_OBJ_DIR) ] || mkdir $(COMMON_OBJ_DIR)
+	@[ -d $(COMMON_OBJ_DIR) ] || mkdir $(COMMON_OBJ_DIR)
 	@for proj in $(PRJS) ; do $(MAKE) -C $(PRJ_PATH)/$$proj $@ ; done
 
 $(PRJS):
@@ -81,6 +83,13 @@ substr = $(word $2,$(subst ., ,$1))
 %.compile:
 	@echo $@
 	$(MAKE) -C $(PRJ_PATH)/$(call substr,$*,1)/$(call substr,$*,2)
+
+%.debug:
+	@echo $@
+	$(MAKE) -C $(PRJ_PATH)/$(call substr,$*,1)/$(call substr,$*,2) debug
+
+%.all: %.clean %.compile %.flash
+	@echo $@
 
 clean_common:
 	@echo [RM] COMMON_OBJ

@@ -9,7 +9,7 @@
 #include "misc.h"
 #include "main.h"
 #include "esp.h"
-#include "../../common/dbg_pin.h"
+#include "dbg_pin.h"
 #include "led_disp.h"
 
 #define FAN_PERC_ADDR 	(0x3F)

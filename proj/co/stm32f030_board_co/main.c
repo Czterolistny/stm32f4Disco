@@ -8,7 +8,13 @@
 #include "sregs.h"
 #include "debugPins.h"
 #include "swuart.h"
-//#include "esp.h"
+#include "esp.h"
+#include "gdisp.h"
+#include "gdispFonts.h"
+#include "../../common/common.h"
+#include "main.h"
+#include "i2c.h"
+
 
 #define FAN_PERC_ADDR 	((uint8_t) 0x3F)
 #define SET_TEMP_ADDR 	((uint8_t) 0x23)
@@ -216,12 +222,16 @@ int main()
 	initTestPin();
 
 	/* SW uart test - never return function */
-	swuartTest();
+	/* swuartTest(); */
 
 	InitUsart1();
 	TIM3_Init();
 
 	sregsInit();
+
+	gdispInit();
+	
+	i2cInit();
 
 	for (;;){
 		if( new_frame_recived == true )

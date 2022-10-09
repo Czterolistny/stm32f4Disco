@@ -16,6 +16,13 @@
 #define SREG_OUTS           (16u)
 #define SREG_MAX_OUTS_NMB   (1 << 15u)
 
+#define gdispSetSregClk_High()      (SREG_DS_CLK_PORT->BSRR = SREG_CLK)
+#define gdispSetSregClk_Low()       (SREG_DS_CLK_PORT->BRR = SREG_CLK)
+#define gdispSetSregRClk_High()     (SREG_OE_RCLK_PORT->BSRR = SREG_RCLK)
+#define gdispSetSregRClk_Low()      (SREG_OE_RCLK_PORT->BRR = SREG_RCLK)
+#define gdispSetSregDs_High()       (SREG_DS_CLK_PORT->BSRR = SREG_DS)
+#define gdispSetSregDs_Low()        (SREG_DS_CLK_PORT->BRR = SREG_DS)
+
 static void sregRefresh(uint16_t outVal);
 
 static uint16_t sregOutput = (SREGS_ESP_UART_EN_DEFAULT_STATE      << 15u)\
@@ -32,8 +39,8 @@ static uint16_t sregOutput = (SREGS_ESP_UART_EN_DEFAULT_STATE      << 15u)\
                              | (SREGS_MCU_RST_DEFAULT_STATE        << 4u)\
                              | (SREGS_FLASH_CS_DEFAULT_STATE       << 3u)\
                              | (SREGS_BOOT0_DEFAULT_STATE          << 2u)\
-                             | (SREGS_UNDEF1                       << 1u)\
-                             | (SREGS_UNDEF2                       << 0u);
+                             | (SREGS_UNDEF1_DEFAULT_STATE         << 1u)\
+                             | (SREGS_UNDEF2_DEFAULT_STATE         << 0u);
 
 void sregsInit(void)
 {
@@ -57,35 +64,37 @@ void sregsInit(void)
 
 static void sregRefresh(uint16_t outVal)
 {
-    GPIO_WriteBit(SREG_OE_RCLK_PORT, SREG_RCLK, Bit_RESET);
-
     for(uint8_t i = 0; i < SREG_OUTS; ++i)
     {
-        GPIO_WriteBit(SREG_DS_CLK_PORT, SREG_CLK, Bit_RESET);
+        gdispSetSregClk_Low();
+        gdispSetSregRClk_Low();
 
-        if( true == ((outVal >> i) & 0x01) )
+        if( 0u != ((outVal >> i) & 0x01) )
         {
-            GPIO_WriteBit(SREG_DS_CLK_PORT, SREG_DS, Bit_SET);
+            gdispSetSregDs_High();
         }else
         {
-            GPIO_WriteBit(SREG_DS_CLK_PORT, SREG_DS, Bit_RESET);
+            gdispSetSregDs_Low();
         }
-        GPIO_WriteBit(SREG_DS_CLK_PORT, SREG_CLK, Bit_SET);
+        gdispSetSregClk_High();
+        /* Prevent from uninteded pins toogling on SReg1 */
+        if( 7u <= i )
+        {
+            gdispSetSregRClk_High();
+        }
     }
-
-    GPIO_WriteBit(SREG_OE_RCLK_PORT, SREG_RCLK, Bit_SET);
 }
 
-void sregsGetOutput(uint8_t outputNmb, bool *state)
+void sregsGetOutput(uint16_t outputNmb, bool *state)
 {
     if( outputNmb > SREG_MAX_OUTS_NMB )
     {
         return;
     }
-    *state = (true == (sregOutput & outputNmb));
+    *state = (true == ((sregOutput & outputNmb) > 0u));
 }
 
-void sregsSetOutput(uint8_t outputNmb, bool state)
+void sregsSetOutput(uint16_t outputNmb, bool state)
 {
     bool actualState;
     if(outputNmb > SREG_MAX_OUTS_NMB)

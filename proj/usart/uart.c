@@ -3,7 +3,7 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_usart.h"
 #include "stm32f4xx_dma.h"
-#include "../common/dbg_pin.h"
+#include "dbg_pin.h"
 #include "uart.h"
 
 #define NULL ((void*) 0)

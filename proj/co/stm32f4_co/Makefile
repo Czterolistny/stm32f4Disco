@@ -38,12 +38,12 @@ COMMON_SRC+=stm32f4xx_usart.c
 COMMON_SRC+=stm32f4xx_rcc.c
 COMMON_SRC+=stm32f4xx_gpio.c
 
-INCLUDE+=-I$../../common
-INCLUDE+=-I$../../usart
+INCLUDE+=-I../../common
+INCLUDE+=-I../../usart
 
 MCUFLAGS+=
 COMMONFLAGS+=
-CFLAGS+=
+CFLAGS+=$(INCLUDE)
 
 LDLIBS+=
 LDFLAGS=$(MCUFLAGS) -u _scanf_float -u _printf_float -fno-exceptions -Wl,--gc-sections,-T$(LINKER_SCRIPT),-Map,$(BIN_DIR)/$(TARGET).map
@@ -53,8 +53,8 @@ COMMON_OBJ = $(COMMON_SRC:%.c=$(COMMON_OBJ_DIR)/%.o)
 
 $(BUILD_DIR)/%.o: %.c
 	@echo [CC] $(notdir $<)
-	[ -d $(BUILD_DIR) ] || mkdir $(BUILD_DIR)
-	[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
+	@[ -d $(BUILD_DIR) ] || mkdir $(BUILD_DIR)
+	@[ -d $(BIN_DIR) ] || mkdir $(BIN_DIR)
 	@$(CC) $(CFLAGS) $< -c -o $@
 
 $(COMMON_OBJ_DIR)/%.o: %.c 
@@ -87,3 +87,7 @@ clean_common:
 	
 flash:
 	@st-flash write $(BIN_DIR)/$(TARGET).bin 0x8000000
+	
+debug:
+	@$(DEFAULT_TERM) -e $(DBG_SCRIPT_DIR)/stm32.sh $TARGET &
+	@$(GDB) $(BIN_DIR)/$(TARGET).elf --tui

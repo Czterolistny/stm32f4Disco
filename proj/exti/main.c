@@ -4,8 +4,8 @@
 #include "stm32f4xx_usart.h"
 #include "stm32f4xx_exti.h"
 #include "stm32f4xx_syscfg.h"
-#include "../usart/uart.h"
-#include "../common/dbg_pin.h"
+#include "uart.h"
+#include "dbg_pin.h"
 
 volatile uint32_t msTicks = 0;
 
