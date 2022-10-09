@@ -352,10 +352,12 @@ void gdispInit(void)
     
     gdispClearDisp();
 
+#if(0)
     char str[] = "Makis Wapis 23059";
     gdispFontSetFontType(Font_Times_New_Roman11x12);
     gdispWriteText(&str[0], 21u, 0u, 0u);
 
     gdispFontSetFontType(Font_Times_New_Roman23x22);
     gdispWriteText(&str[0], 16u, 10u, 0u);
+#endif
 }

@@ -1,1 +1,1 @@
-USART periph in blocking mode, interrupt  mode, DMA
+USART periph example in blocking mode, interrupt  mode, DMA
