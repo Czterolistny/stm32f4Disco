@@ -29,6 +29,7 @@ SRC+=gdisp.c
 SRC+=gdispFonts.c
 SRC+=i2c.c
 SRC+=flash.c
+SRC+=spi.c
 
 # Project Source Files
 COMMON_SRC+=stm32f0xx_it.c

@@ -3,63 +3,94 @@
 #include "stm32f0xx_spi.h"
 #include "stm32f0xx_gpio.h"
 #include "stm32f0xx_rcc.h"
-#include "sregs.h"
+#include "spi.h"
+#include <stdbool.h>
 
 #define FLASH_READ_STATUS_REG       (0x05u)
 #define FLASH_READ_UNIQUE_ID        (0x4Bu)
 #define FLASH_READ_MANUF_DEVICE_ID  (0x90u)
 #define FLASH_READ_IDENTIFIC        (0x9Fu)
+#define FLASH_READ_BYTE             (0x03u)
 
-uint8_t flashBuf[3u];
+#define FLASH_ADDR_BYTES            (0x03u)
+
+static bool g_flashInProcess = false;
+
+#define flashGetAreaPtr(obj,addr) ({ \
+                                        do {\
+                                            g_area.address = addr; \
+                                            g_area.size = sizeof(obj); \
+                                            g_area.object = (void*) &obj; \
+                                        }while (0u); \
+                                        &g_area; \
+                                    })
+
+typedef struct{
+    uint32_t address;
+    uint16_t size;
+    void *object;
+}flashArea;
+static flashArea g_area;
+
+uint8_t flashTestBuf[3u];
 void flashTest(void)
 {
-    sregsSetOutput(SREGS_FLASH_CS, false);
+    spiSetCS_Low();
 
-    SPI_SendData8(SPI1, FLASH_READ_IDENTIFIC);
-    while(SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_IT_TXE) == SET);
+    spiWriteByte(FLASH_READ_IDENTIFIC);
+    spiRead(&flashTestBuf[0u], 3u);
 
-    while(SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_IT_RXNE) == RESET);
-    flashBuf[0u] = SPI_ReceiveData8(SPI1);
-    while(SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_IT_RXNE) == RESET);
-    flashBuf[1u] = SPI_ReceiveData8(SPI1);
-    while(SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_IT_RXNE) == RESET);
-    flashBuf[2u] = SPI_ReceiveData8(SPI1);
+    spiSetCS_High();
+}
 
-    sregsSetOutput(SREGS_FLASH_CS, true);
+uint8_t flashReadBlock(uint32_t start_addr, uint32_t size, uint8_t *buf, uint8_t chunk)
+{
+    static uint32_t bytesRead;
+    uint8_t interChunk = chunk;
+    if( size < chunk )
+    {
+        interChunk = size;
+    }else
+    {
+        if( (bytesRead + interChunk) > size)
+        {
+            interChunk = interChunk - ((bytesRead + (uint32_t)interChunk) - size);
+        }
+    }
+
+    if( false == g_flashInProcess )
+    {
+        spiSetCS_Low();
+
+        spiWriteByte(FLASH_READ_IDENTIFIC);
+        flashTestBuf[0u] = (uint8_t)(start_addr & 0xFF0000u);
+        flashTestBuf[1u] = (uint8_t)(start_addr & 0xFF00u);
+        flashTestBuf[2u] = (uint8_t)(start_addr & 0xFFu);
+        spiWrite(&flashTestBuf[0u], FLASH_ADDR_BYTES);
+        g_flashInProcess = true;
+        bytesRead = 0u;
+    }
+
+    spiRead(buf, interChunk);
+    bytesRead += interChunk;
+    if( bytesRead >= size )
+    {
+        g_flashInProcess = false;
+        return 0;
+    }
+    return 1;
+
+}
+
+void flashReadObj(flashObj1 *obj)
+{
+    flashArea *area =  flashGetAreaPtr(obj, TEST_AREA_ADDR);
+    flashReadBlock(area->address, area->size, (uint8_t*) (area->object), area->size);
 }
 
 void flashInit(void)
 {
-    RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
-
-    // PA5 SCK 6 MISO 7 MOSI
-    GPIO_InitTypeDef GPIO_InitStruct;
-    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource5, GPIO_AF_0);
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource6, GPIO_AF_0);
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource7, GPIO_AF_0);
-
-    SPI_InitTypeDef SPI_InitStruct;
-    SPI_StructInit(&SPI_InitStruct);
-
-    SPI_InitStruct.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-    SPI_InitStruct.SPI_Mode = SPI_Mode_Master;
-    SPI_InitStruct.SPI_DataSize = SPI_DataSize_8b;
-    SPI_InitStruct.SPI_CPOL = SPI_CPOL_Low;
-    SPI_InitStruct.SPI_CPHA = SPI_CPHA_1Edge;
-    SPI_InitStruct.SPI_NSS = SPI_NSS_Soft;
-    SPI_InitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_256;
-    SPI_InitStruct.SPI_FirstBit = SPI_FirstBit_MSB;
-    SPI_Init(SPI1, &SPI_InitStruct);
-
-    SPI_Cmd(SPI1, ENABLE);
-
+    spiInit();
     flashTest();
+    flashReadObj(&obj1);
 }

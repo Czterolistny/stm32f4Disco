@@ -14,6 +14,7 @@
 #include "../../common/common.h"
 #include "main.h"
 #include "i2c.h"
+#include "flash.h"
 
 
 #define PARAM_FAN_PERC_IDX 		((uint8_t) 0x3Fu)
@@ -333,6 +334,7 @@ int main()
 	gdispInit();
 	
 	i2cInit();
+	flashInit();
 
 	/* never returns */
 	runCoProcEngine(&ControlCtx);
