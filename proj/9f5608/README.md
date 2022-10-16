@@ -1,1 +1,1 @@
-Parreller Flash memmory read-out code.
+Parreller Flash memmory read-out example.

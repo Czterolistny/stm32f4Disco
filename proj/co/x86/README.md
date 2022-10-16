@@ -1,1 +1,1 @@
-C files to indicate required parameters sent from CO. controller throught UART.
+Tests for Central heating controller's communication

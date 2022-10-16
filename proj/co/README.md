@@ -1,2 +1,4 @@
-Wireless module for central heating controller on STM32 with remote access via website.
-Manufacturer's ethernet module doesn't allow wireless connection so i decided to do it from scratch by "hacking" sent frame from controller and pick up required parameters and in some sense to emulate manufacturer's module to not get an error "No module found" at controller front panel.
+Addon module for Central heating controller - stm32f4 proof of concept & custom stm32f030 board
+
+![alt text](https://github.com/Czterolistny/stm32f4disco/blob/master/proj/co/stm32f030_board_co/20220702_092540.jpg)
+
