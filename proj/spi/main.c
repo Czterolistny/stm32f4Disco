@@ -3,14 +3,16 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_usart.h"
 #include "stm32f4xx_spi.h"
-#include "../usart/uart.h"
-#include "../common/dbg_pin.h"
+#include "uart.h"
+#include "dbg_pin.h"
 
 #define CS_PIN GPIO_Pin_4
 #define CS_PORT GPIOA
 
 #define CS_SET() GPIO_ResetBits(CS_PORT, CS_PIN);
 #define CS_RESET() GPIO_SetBits(CS_PORT, CS_PIN);
+
+#define MX25x_MemSizeByte (uint32_t)(1048575u)
 
 volatile uint32_t msTicks = 0;
 
@@ -20,11 +22,10 @@ void delay_ms(uint32_t ms)
 	
 	while(ticks > msTicks);
 	while(ticks < msTicks);
-
 }
 
 void SysTick_Handler()
-{	
+{
 	msTicks++;
 }
 
@@ -126,6 +127,29 @@ uint8_t MX25x_Read_ElecID(void)
 	return ElecID;
 }
 
+void MX25x_Read_Mem(uint8_t *buf, uint32_t addr, uint8_t len)
+{
+	uint8_t cmd[4u];
+	cmd[0u] = 0x03u;
+	cmd[1u] = (uint8_t) ((addr & 0xFF0000u) >> 16u);
+	cmd[2u] = (uint8_t) ((addr & 0x00FF00u) >> 8u);
+	cmd[3u] = (uint8_t) (addr & 0x0000FFu);
+	CS_SET();
+	SPI1_Write(&cmd[0u], 4u);
+	SPI1_Read(buf, len);
+	CS_RESET();
+}
+
+void MX25x_Dump_All(void)
+{
+	uint8_t buf[8u];
+	for(uint32_t addr = 0u; addr < MX25x_MemSizeByte; addr += 8u)
+	{
+		MX25x_Read_Mem(&buf[0u], addr, 8u);
+		USART2_SendBlocking(&buf[0u], 8u);
+	}
+}
+
 int main(void) {
   
 	SystemInit();
@@ -137,13 +161,16 @@ int main(void) {
 	
 	SetTestPin();
 
+#if(0)
 	uint8_t id[3u];
-
 	MX25x_Read_Ident(&id[0u]);
 	USART2_SendBlocking(&id[0u], 3u);
 	id[0] = MX25x_Read_DevID();
 	id[1] = MX25x_Read_ElecID();
 	USART2_SendBlocking(&id[0u], 2u);
-	
+#endif
+
+	MX25x_Dump_All();
+
 for (;;){};
 }
