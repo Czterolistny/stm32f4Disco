@@ -15,7 +15,7 @@
 #include "main.h"
 #include "i2c.h"
 #include "flash.h"
-
+#include "touch.h"
 
 #define PARAM_FAN_PERC_IDX 		((uint8_t) 0x3Fu)
 #define PARAM_SET_TEMP_IDX 		((uint8_t) 0x23u)
@@ -336,6 +336,8 @@ int main()
 	i2cInit();
 	flashInit();
 
+	touchInit();
+	
 	/* never returns */
 	runCoProcEngine(&ControlCtx);
 }

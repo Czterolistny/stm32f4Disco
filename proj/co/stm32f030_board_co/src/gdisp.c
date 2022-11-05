@@ -5,8 +5,20 @@
 #include <stm32f0xx_spi.h>
 #include "stdbool.h"
 #include "gdispFonts.h"
+#include "touch.h"
+#include "../../../common/common.h"
 
-#define MSB_FIRST
+#define BIG_ENDIAN_ORDER    (false)
+#define MSB_FIRST           (true)
+
+#if (MSB_FIRST == false)
+# undef MSB_FIRST
+#endif
+
+#if (BIG_ENDIAN_ORDER == false)
+# undef BIG_ENDIAN_ORDER
+#endif
+
 #ifdef MSB_FIRST
     #define gdispPixMask                    (0xE0u)
     #define gdispIncrPixIter(pixIter)       (pixIter >> gdispPixNmbInWord)
@@ -21,8 +33,6 @@
     #define gdispMaxValPixShiftByte         (gdispPixMask << 5u)
 #endif
 
-//#define BIG_ENDIAN_ORDER
-
 #define gdispSecondPixIdx       (2u)
 
 #define gdispPix0Shift          (3u)
@@ -36,29 +46,36 @@
 #define gdispXRes               (240u)
 #define gdispYRes               (128u)
 
+#define gdispColMostLeftCorner    (0u)
+#define gdispColMostRightCorner   ((gdispXRes / 3u) - 1u)
+#define gdispRowMostDownCorner    (gdispYRes - 1u)
+#define gdispRowMostUpCorner      (0u)
+#define gdispColMiddleOfScreen    ((gdispXRes / 6u) - 1u)
+#define gdispRowMiddleOfScreen    ((gdispYRes / 2u) - 1u)
+
 #define gdispPixNmbInWord       (3u)
 
 #define gdispPixBlackPix        (0x1fu)
 
-#define gdispPORT           GPIOB
-#define gdispPinMOSI        GPIO_Pin_15
-#define gdispPinMISO        GPIO_Pin_14
-#define gdispPinCLK         GPIO_Pin_13
-#define gdispPinCS          GPIO_Pin_12
+#define gdispPORT               (GPIOB)
+#define gdispPinMOSI            (GPIO_Pin_15)
+#define gdispPinMISO            (GPIO_Pin_14)
+#define gdispPinCLK             (GPIO_Pin_13)
+#define gdispPinCS              (GPIO_Pin_12)
 
-#define gdispPinBLigth      GPIO_Pin_0
+#define gdispPinBLigth          (GPIO_Pin_0)
 
-#define gdispSetMISO_High() gdispPORT->BSRR = gdispPinMISO;
-#define gdispSetMISO_Low()  gdispPORT->BRR = gdispPinMISO;
+#define gdispSetMISO_High()     gdispPORT->BSRR = gdispPinMISO;
+#define gdispSetMISO_Low()      gdispPORT->BRR = gdispPinMISO;
 
-#define gdispSetMOSI_High() gdispPORT->BSRR = gdispPinMOSI;
-#define gdispSetMOSI_Low()  gdispPORT->BRR = gdispPinMOSI;
+#define gdispSetMOSI_High()     gdispPORT->BSRR = gdispPinMOSI;
+#define gdispSetMOSI_Low()      gdispPORT->BRR = gdispPinMOSI;
 
-#define gdispSetCLK_High()  gdispPORT->BSRR = gdispPinCLK;
-#define gdispSetCLK_Low()   gdispPORT->BRR = gdispPinCLK;
+#define gdispSetCLK_High()      gdispPORT->BSRR = gdispPinCLK;
+#define gdispSetCLK_Low()       gdispPORT->BRR = gdispPinCLK;
 
-#define gdispSetCS_High()   gdispPORT->BSRR = gdispPinCS;
-#define gdispSetCS_Low()    gdispPORT->BRR = gdispPinCS;
+#define gdispSetCS_High()       gdispPORT->BSRR = gdispPinCS;
+#define gdispSetCS_Low()        gdispPORT->BRR = gdispPinCS;
 
 #define gdispSetMISO_CS_High()   do {\
                                     gdispSetMISO_High();\
@@ -71,11 +88,20 @@
                                 } while (0u);
 
 #define gdispSetMOSI(boolean_val) do {\
-    if(true == boolean_val) \
-        gdispSetMOSI_High()\
-    else \
-        gdispSetMOSI_Low()\
-    } while (0u);
+                                    if(true == boolean_val) \
+                                        gdispSetMOSI_High()\
+                                    else \
+                                        gdispSetMOSI_Low()\
+                                } while (0u);
+
+#define gdispSetMostLeftUpCorner()      (gdispSetPos(gdispRowMostUpCorner, gdispColMostLeftCorner))
+#define gdispSetMostLeftDownCorner()    (gdispSetPos(gdispRowMostDownCorner, gdispColMostLeftCorner))
+#define gdispSetMostRighUpCorner()      (gdispSetPos(gdispRowMostUpCorner, gdispColMostRightCorner))
+#define gdispSetMostRighDownCorner()    (gdispSetPos(gdispRowMostDownCorner, gdispColMostRightCorner))
+#define gdispSetMiddleOfScreen()        (gdispSetPos(gdispRowMiddleOfScreen, gdispColMiddleOfScreen))
+
+#define gdispCalibPointsNmb             (5u)
+#define gdispCalibPointPixSize          (5u)
 
 static const uint8_t gdispInitBuf[] = {0xe2, 0x25, 0x2b, 0xc4, 0xc8, 0x00, 0xa1, 0xd1, 0x89, 0xd6, 0xeb,
                                      0x81, 0x12, 0xb0, 0xa6, 0xf1, 0x7f, 0xf4, 0x00, 0xf5, 0x00, 0xf6,
@@ -90,6 +116,31 @@ static const uint8_t gdispInitBuf2[] = {0x81, 0x1e};
 static const uint8_t gdispInitBuf3[] = {0xf4, 0x00, 0xf5, 0x00, 0xf6, 0x4f, 0xf7, 0x7f, 0x00, 0x10, 0x60, 0x70};
 static const uint8_t gdispInitBuf4[] = {0xe2, 0x2f, 0x25, 0xea, 0x81, 0x4f, 0x40, 0x88, 0xaf};
 #endif
+
+static uint8_t gdispCurColId;
+static uint8_t gdispCurRowId;
+
+static const uint8_t gdispCalibPoint[] = {0x04u, 0x0Eu, 0x1F, 0x0Eu, 0x04u};
+
+typedef struct{
+    uint8_t row;
+    uint8_t col;
+}CalibPointsPos;
+const CalibPointsPos gdispCalibPos[gdispCalibPointsNmb] = {{gdispRowMostUpCorner, gdispColMostLeftCorner},
+                                                     {gdispRowMostDownCorner - gdispCalibPointPixSize, gdispColMostLeftCorner},
+                                                     {gdispRowMostUpCorner, gdispColMostRightCorner - 2u},
+                                                     {gdispRowMostDownCorner - gdispCalibPointPixSize, gdispColMostRightCorner - 2u},
+                                                     {gdispRowMiddleOfScreen - gdispCalibPointPixSize, gdispColMiddleOfScreen - 2u}};
+
+typedef struct{
+    const CalibPointsPos *pointsPos;
+    const uint8_t *pointData;
+    const uint8_t pointDataLen;
+    const uint8_t pointPixSize;
+    const uint8_t pointsNmb;
+}CalibPoints;
+const CalibPoints gdispCalibPoints = {.pointsPos = &gdispCalibPos[0u], .pointData = &gdispCalibPoint[0u],
+                                .pointDataLen = 5u, .pointPixSize = gdispRowMostUpCorner, .pointsNmb = gdispCalibPointsNmb};
 
 inline static void gdispSendByte(uint8_t byte);
 inline static void gdispMake2ByteBuf(uint8_t *buf, uint16_t dispData);
@@ -218,6 +269,7 @@ void gdispSetRow(uint8_t row)
         cmd[0] += (row % 0x10u);
         cmd[1] += (row / 0x10u);
         gdispSendCmd(&cmd[0], 2u);
+        gdispCurRowId = row;
     }
 }
 
@@ -229,6 +281,7 @@ void gdispSetCol(uint8_t col)
         cmd[0] += (col % 0x10u);
         cmd[1] += (col / 0x10u);
         gdispSendCmd(&cmd[0], 2u);
+        gdispCurColId = col;
     }
 }
 
@@ -244,6 +297,20 @@ void gdispSendDataU16(uint16_t data)
     buf[1] = (uint8_t)(data & 0xFFu);
     buf[0] = (uint8_t)((data & 0xFF00u) >> 8u);
     gdispSendData(&buf[0], 2u);
+}
+
+static void gdispSetNextRow(int8_t idx)
+{
+    int16_t tmpRow = ((int16_t) gdispCurRowId) + idx;
+    if( (int16_t)gdispRowMostUpCorner > tmpRow )
+    {
+        tmpRow = (int16_t)gdispRowMostUpCorner;
+    }
+    if( gdispRowMostDownCorner < (uint16_t)tmpRow )
+    {
+        tmpRow = (int16_t)gdispRowMostDownCorner;
+    }
+    gdispSetPos((uint8_t) tmpRow, gdispCurColId);
 }
 
 void gdispSendData(uint8_t * buf, uint8_t len)
@@ -339,6 +406,37 @@ void gdispWriteText(char * text, uint8_t len, uint8_t rowIdx, uint8_t colIdx)
         }
         tmpColIdx += 1u + signSpan / 3u;
         gdispSetPos(rowIdx, tmpColIdx);
+    }
+}
+
+void gdispDispCalibPoints(void)
+{
+    for(uint8_t p = 0u; p < gdispCalibPoints.pointsNmb; ++p)
+    {
+        gdispSetPos(gdispCalibPoints.pointsPos[p].row, gdispCalibPoints.pointsPos[p].col);
+        for(uint8_t i = 0u; i < gdispCalibPoints.pointDataLen; ++i)
+        {
+            gdispSendData((uint8_t*) &gdispCalibPoints.pointData[i], 1u);
+            gdispSetNextRow(1);
+        }
+    }
+}
+
+void gdispDrawItem(uint8_t *item, uint8_t ypos, uint8_t xpos, uint8_t yPixlen, uint8_t xPixlen)
+{
+    uint8_t byteRowCnt = (uint8_t)(xPixlen / 8u) + ((xPixlen % 8u)? 1u: 0u);
+    uint16_t itemBytes = (byteRowCnt * yPixlen);
+    gdispSetPos(ypos, xpos);
+    for(uint16_t byteCnt = 0u; byteCnt < itemBytes; ++byteCnt)
+    {
+        gdispSendData(item++, 1u);
+        if( 0u == (byteCnt % byteRowCnt) )
+        {
+            if( (0u != byteCnt) || ( 1u == itemBytes) )
+            {
+                gdispSetNextRow(1);
+            }
+        }
     }
 }
 
