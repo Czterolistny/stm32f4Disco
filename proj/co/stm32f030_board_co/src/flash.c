@@ -6,18 +6,6 @@
 #include "spi.h"
 #include <stdbool.h>
 
-#define FLASH_READ_STATUS_REG_CMD       (0x05u)
-#define FLASH_WRITE_STATUS_REG_CMD      (0x01u)
-#define FLASH_READ_UNIQUE_ID_CMD        (0x4Bu)
-#define FLASH_READ_MANUF_DEVICE_ID_CMD  (0x90u)
-#define FLASH_READ_IDENTIFIC_CMD        (0x9Fu)
-
-#define FLASH_WR_ENABLE_CMD             (0x06u)
-#define FLASH_WR_DISABLE_CMD            (0x04u)
-#define FLASH_WRITE_STAT_REG_CMD        (0x01u)
-#define FLASH_READ_DATA_CMD             (0x03u)
-#define FLASH_WRITE_DATA_CMD            (0x02u)
-
 #define FLASH_WIP_BIT_IDX               (0x01u << 0u)
 
 #define FLASH_ADDR_BYTES                (0x03u)
@@ -33,45 +21,70 @@
 
 #define flashGetCmdBufRef()     (&g_flashBuf[0u])
 
-static bool g_flashBlockOperationInProgress = false;
-static uint8_t g_flashBuf[4u];
+#define flashClearBuf()         ({ \
+                                    do {\
+                                        g_flashBuf[0u] = 0x00; \
+                                        g_flashBuf[1u] = 0x00; \
+                                        g_flashBuf[2u] = 0x00; \
+                                        g_flashBuf[3u] = 0x00; \
+                                    }while (0u); \
+                                })
 
-static flashObj1 obj1 = {.param1 = 0xA5u, .param2 = 0xBCDF};
-flashAreaObj areaObj1 = {.addr = TEST_OBJ_ADDR, .size = TEST_OBJ_SIZE, .obj = (void*)&obj1};
+static bool g_flashBlockOperationInProgress = false;
+volatile static uint8_t g_flashBuf[4u];
+
+volatile static flashObj1 obj1 = {.param1 = 0xA5u, .param2 = 0xBCDF};
+flashAreaObj areaObj1 = {.addr = TEST_OBJ_ADDR, .size = TEST_OBJ_SIZE, .obj = (const void*)&obj1};
 
 typedef struct{
     uint8_t cmd_id;
     uint8_t byteToWrite;
     int8_t byteToRead;
-    uint8_t *cmdBuf;
+    volatile uint8_t *cmdBuf;
 }FlashCmd;
 
 typedef enum{
-    FLASH_READ_IDENTIFIC_CMD_IDX = 0,
-    FLASH_WR_ENABLE_CMD_IDX,
+    FLASH_WR_ENABLE_CMD_IDX = 0,
     FLASH_WR_DISABLE_CMD_IDX,
     FLASH_READ_STATUS_REG_CMD_IDX,
     FLASH_WRITE_STATUS_REG_CMD_IDX,
-    FLASH_READ_DATA_CMD_IDX
+    FLASH_READ_DATA_CMD_IDX,
+    FLASH_WRITE_DATA_CMD_IDX,
+    FLASH_MANUF_DEV_ID_CMD_IDX,
+    FLASH_READ_IDENTIFIC_CMD_IDX,
+    FLASH_READ_UNIQE_CMD_IDX
 }CmdType;
 
 static FlashCmd flashCmd[] = {
-    {.cmd_id = FLASH_READ_IDENTIFIC_CMD, .byteToWrite = 0u, .byteToRead = 3, .cmdBuf = &g_flashBuf[0u]},
-    {.cmd_id = FLASH_WR_ENABLE_CMD, .byteToWrite = 0u, .byteToRead = 0, .cmdBuf = &g_flashBuf[0u]},
-    {.cmd_id = FLASH_WR_DISABLE_CMD, .byteToWrite = 0u, .byteToRead = 0, .cmdBuf = &g_flashBuf[0u]},
-    {.cmd_id = FLASH_READ_STATUS_REG_CMD, .byteToWrite = 0u, .byteToRead = 1, .cmdBuf = &g_flashBuf[0u]},
-    {.cmd_id = FLASH_WRITE_STATUS_REG_CMD, .byteToWrite = 1u, .byteToRead = 0, .cmdBuf = &g_flashBuf[0u]},
-    {.cmd_id = FLASH_READ_DATA_CMD, .byteToWrite = 3u, .byteToRead = -1, .cmdBuf = &g_flashBuf[0u]}};
+    /* Write Enable Cmd - FLASH_WR_ENABLE_CMD_IDX */
+    {.cmd_id = 0x06, .byteToWrite = 0u, .byteToRead = 0, .cmdBuf = &g_flashBuf[0u]},
+    /* Write Disable Cmd - FLASH_WR_DISABLE_CMD_IDX */
+    {.cmd_id = 0x04, .byteToWrite = 0u, .byteToRead = 0, .cmdBuf = &g_flashBuf[0u]},
+    /* Read Status Register Cmd - FLASH_READ_STATUS_REG_CMD_IDX */
+    {.cmd_id = 0x05, .byteToWrite = 0u, .byteToRead = 1, .cmdBuf = &g_flashBuf[0u]},
+    /* Write Status Register Cmd - FLASH_WRITE_STATUS_REG_CMD_IDX */
+    {.cmd_id = 0x01, .byteToWrite = 1u, .byteToRead = 0, .cmdBuf = &g_flashBuf[0u]},
+    /* Read Data Cmd - FLASH_READ_DATA_CMD_IDX */
+    {.cmd_id = 0x03, .byteToWrite = 3u, .byteToRead = -1, .cmdBuf = &g_flashBuf[0u]},
+    /* Page Program Cmd - FLASH_WRITE_DATA_CMD_IDX */
+    {.cmd_id = 0x02, .byteToWrite = 3u, .byteToRead = -1, .cmdBuf = &g_flashBuf[0u]},
+    /* Manufacturer/Device ID Cmd - FLASH_MANUF_DEV_ID_CMD_IDX */
+    {.cmd_id = 0x90, .byteToWrite = 3u, .byteToRead = 2, .cmdBuf = &g_flashBuf[0u]},
+    /* Read Identification Cmd - FLASH_READ_IDENTIFIC_CMD_IDX */
+    {.cmd_id = 0x9F, .byteToWrite = 0u, .byteToRead = 4, .cmdBuf = &g_flashBuf[0u]},
+    /* Read Unique ID Cmd - FLASH_READ_UNIQE_CMD_IDX */
+    {.cmd_id = 0x4B, .byteToWrite = 4u, .byteToRead = 1, .cmdBuf = &g_flashBuf[0u]}
+    };
 
 static void flashWriteCmd(CmdType cmd_idx)
 {
     spiSetCS_Low();
     spiWriteByte(flashCmd[cmd_idx].cmd_id);
-    spiWrite(flashCmd[cmd_idx].cmdBuf, flashCmd[cmd_idx].byteToWrite);
+    spiWrite((uint8_t *) flashCmd[cmd_idx].cmdBuf, flashCmd[cmd_idx].byteToWrite);
     /* Do not finish transmission if command requires unexpected amount of byte to read */
     if( flashCmd[cmd_idx].byteToRead >= 0 )
     {
-        spiRead(flashCmd[cmd_idx].cmdBuf, flashCmd[cmd_idx].byteToRead);
+        spiRead((uint8_t *) flashCmd[cmd_idx].cmdBuf, flashCmd[cmd_idx].byteToRead);
         spiSetCS_High();
     }else{
         /* CS has to be set 'by hand' after trasmition get completed */
@@ -111,7 +124,17 @@ static uint8_t flashGetInterChunkSize(uint32_t size, uint8_t chunk)
 void flashTest(void)
 {
     flashWriteCmd(FLASH_READ_IDENTIFIC_CMD_IDX);
-    uint8_t *res = flashGetCmdBufRef();
+    //uint8_t *res = flashGetCmdBufRef();
+
+    flashWriteCmd(FLASH_READ_STATUS_REG_CMD_IDX);
+
+    flashWriteCmd(FLASH_WR_ENABLE_CMD_IDX);
+    flashWriteCmd(FLASH_READ_STATUS_REG_CMD_IDX);
+
+    g_flashBuf[0u] = 0x02u;
+    flashWriteCmd(FLASH_WR_ENABLE_CMD_IDX);
+    flashWriteCmd(FLASH_READ_STATUS_REG_CMD_IDX);
+
 }
 
 uint8_t flashWriteBlock(uint32_t start_addr, uint32_t size, uint8_t *buf, uint8_t chunk)
@@ -122,17 +145,16 @@ uint8_t flashWriteBlock(uint32_t start_addr, uint32_t size, uint8_t *buf, uint8_
         flashWriteCmd(FLASH_WR_ENABLE_CMD_IDX);
 
         while( true == flashIsWriteInProgress() ){};
-        spiSetCS_Low();
 
-        spiWriteByte(FLASH_WRITE_DATA_CMD);
+        flashWriteCmd(FLASH_WRITE_DATA_CMD_IDX);
         uint8_t *addr = flashGetAddrBuf(start_addr);
         spiWrite(addr, FLASH_ADDR_BYTES);
         g_flashBlockOperationInProgress = true;
     }
 
     interChunk = flashGetInterChunkSize(size, chunk);
-    spiRead(buf, interChunk);
-    if( interChunk < chunk )
+    spiWrite(buf, interChunk);
+    if( interChunk <= chunk )
     {
         g_flashBlockOperationInProgress = false;
         spiSetCS_High();
@@ -147,9 +169,7 @@ uint8_t flashReadBlock(uint32_t start_addr, uint32_t size, uint8_t *buf, uint8_t
     uint8_t interChunk;
     if( false == g_flashBlockOperationInProgress )
     {
-        spiSetCS_Low();
-
-        spiWriteByte(FLASH_WRITE_DATA_CMD);
+        flashWriteCmd(FLASH_READ_DATA_CMD_IDX);
         uint8_t *addr = flashGetAddrBuf(start_addr);
         spiWrite(addr, FLASH_ADDR_BYTES);
         g_flashBlockOperationInProgress = true;
@@ -157,7 +177,7 @@ uint8_t flashReadBlock(uint32_t start_addr, uint32_t size, uint8_t *buf, uint8_t
 
     interChunk = flashGetInterChunkSize(size, chunk);
     spiRead(buf, interChunk);
-    if( interChunk < chunk )
+    if( interChunk <= chunk )
     {
         g_flashBlockOperationInProgress = false;
         spiSetCS_High();
@@ -168,17 +188,21 @@ uint8_t flashReadBlock(uint32_t start_addr, uint32_t size, uint8_t *buf, uint8_t
 
 void flashWriteAreaObj(flashAreaObj *areaObj)
 {
-    flashWriteBlock(areaObj->addr, areaObj->size, (uint8_t*) (&areaObj->obj), areaObj->size);
+    flashWriteBlock(areaObj->addr, areaObj->size, (uint8_t*) (areaObj->obj), areaObj->size);
 }
 
 void flashReadAreaObj(flashAreaObj *areaObj)
 {
-    flashReadBlock(areaObj->addr, areaObj->size, (uint8_t*) (&areaObj->obj), areaObj->size);
+    flashReadBlock(areaObj->addr, areaObj->size, (uint8_t*) (areaObj->obj), areaObj->size);
 }
 
 void flashInit(void)
 {
     spiInit();
     flashTest();
+    flashWriteAreaObj(&areaObj1);
+    obj1.param1 = 1u;
+    obj1.param2 = 3u;
     flashReadAreaObj(&areaObj1);
+    flashTest();
 }

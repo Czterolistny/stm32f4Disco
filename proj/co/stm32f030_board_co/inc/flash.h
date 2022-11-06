@@ -18,7 +18,7 @@ typedef struct{
 typedef struct{
     const uint32_t addr;
     const uint16_t size;
-    void *obj;
+    const void *obj;
 }flashAreaObj;
 
 extern flashAreaObj areaObj1;
