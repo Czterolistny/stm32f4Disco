@@ -28,5 +28,6 @@ void flashReadAreaObj(flashAreaObj *obj);
 void flashWriteAreaObj(flashAreaObj *obj);
 uint8_t flashReadBlock(uint32_t start_addr, uint32_t size, uint8_t *buf, uint8_t chunk);
 uint8_t flashWriteBlock(uint32_t start_addr, uint32_t size, uint8_t *buf, uint8_t chunk);
+void flashEraseSector(uint16_t sector);
 
 #endif

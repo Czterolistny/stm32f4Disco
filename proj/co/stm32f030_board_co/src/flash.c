@@ -9,31 +9,31 @@
 #define FLASH_WIP_BIT_IDX               (0x01u << 0u)
 
 #define FLASH_ADDR_BYTES                (0x03u)
+#define FLASH_GBUF_SIZE                 (0x04u)
 
-#define flashGetAddrBuf(addr_24) ({ \
+#define flashSetAddrBuf(addr_24) ({ \
                                     do {\
-                                        g_flashBuf[0u] = (uint8_t)(start_addr & 0xFF0000u); \
-                                        g_flashBuf[1u] = (uint8_t)(start_addr & 0xFF00u); \
-                                        g_flashBuf[2u] = (uint8_t)(start_addr & 0xFFu); \
+                                        g_flashAddrBuf[0u] = (uint8_t)((addr_24 & 0xFF0000u) >> 16u); \
+                                        g_flashAddrBuf[1u] = (uint8_t)((addr_24 & 0xFF00u) >> 8u); \
+                                        g_flashAddrBuf[2u] = (uint8_t)(addr_24 & 0xFFu); \
                                     }while (0u); \
-                                    &g_flashBuf[0u]; \
+                                    (uint8_t *)&g_flashAddrBuf[0u]; \
                                 })
 
-#define flashGetCmdBufRef()     (&g_flashBuf[0u])
+#define flashGetGBufRef()     ((uint8_t *) &g_flashBuf[0u])
 
 #define flashClearBuf()         ({ \
                                     do {\
-                                        g_flashBuf[0u] = 0x00; \
-                                        g_flashBuf[1u] = 0x00; \
-                                        g_flashBuf[2u] = 0x00; \
-                                        g_flashBuf[3u] = 0x00; \
+                                        for(uint8_t i = 0u; i < FLASH_GBUF_SIZE; ++i ) \
+                                            g_flashBuf[i] = 0x00u; \
                                     }while (0u); \
                                 })
 
 static bool g_flashBlockOperationInProgress = false;
-volatile static uint8_t g_flashBuf[4u];
+volatile static uint8_t g_flashBuf[FLASH_GBUF_SIZE];
+volatile static uint8_t g_flashAddrBuf[FLASH_ADDR_BYTES];
 
-volatile static flashObj1 obj1 = {.param1 = 0xA5u, .param2 = 0xBCDF};
+volatile static flashObj1 obj1 = {.param1 = 0xA5u, .param2 = 0xACDE};
 flashAreaObj areaObj1 = {.addr = TEST_OBJ_ADDR, .size = TEST_OBJ_SIZE, .obj = (const void*)&obj1};
 
 typedef struct{
@@ -52,7 +52,8 @@ typedef enum{
     FLASH_WRITE_DATA_CMD_IDX,
     FLASH_MANUF_DEV_ID_CMD_IDX,
     FLASH_READ_IDENTIFIC_CMD_IDX,
-    FLASH_READ_UNIQE_CMD_IDX
+    FLASH_READ_UNIQE_CMD_IDX,
+    FLASH_SECTOR_ERASE_CMD_IDX
 }CmdType;
 
 static FlashCmd flashCmd[] = {
@@ -65,15 +66,17 @@ static FlashCmd flashCmd[] = {
     /* Write Status Register Cmd - FLASH_WRITE_STATUS_REG_CMD_IDX */
     {.cmd_id = 0x01, .byteToWrite = 1u, .byteToRead = 0, .cmdBuf = &g_flashBuf[0u]},
     /* Read Data Cmd - FLASH_READ_DATA_CMD_IDX */
-    {.cmd_id = 0x03, .byteToWrite = 3u, .byteToRead = -1, .cmdBuf = &g_flashBuf[0u]},
+    {.cmd_id = 0x03, .byteToWrite = 3u, .byteToRead = -1, .cmdBuf = &g_flashAddrBuf[0u]},
     /* Page Program Cmd - FLASH_WRITE_DATA_CMD_IDX */
-    {.cmd_id = 0x02, .byteToWrite = 3u, .byteToRead = -1, .cmdBuf = &g_flashBuf[0u]},
+    {.cmd_id = 0x02, .byteToWrite = 3u, .byteToRead = -1, .cmdBuf = &g_flashAddrBuf[0u]},
     /* Manufacturer/Device ID Cmd - FLASH_MANUF_DEV_ID_CMD_IDX */
     {.cmd_id = 0x90, .byteToWrite = 3u, .byteToRead = 2, .cmdBuf = &g_flashBuf[0u]},
     /* Read Identification Cmd - FLASH_READ_IDENTIFIC_CMD_IDX */
     {.cmd_id = 0x9F, .byteToWrite = 0u, .byteToRead = 4, .cmdBuf = &g_flashBuf[0u]},
     /* Read Unique ID Cmd - FLASH_READ_UNIQE_CMD_IDX */
-    {.cmd_id = 0x4B, .byteToWrite = 4u, .byteToRead = 1, .cmdBuf = &g_flashBuf[0u]}
+    {.cmd_id = 0x4B, .byteToWrite = 4u, .byteToRead = 1, .cmdBuf = &g_flashBuf[0u]},
+    /* Sector erase ID Cmd - FLASH_SECTOR_ERASE_CMD_IDX */
+    {.cmd_id = 0x20, .byteToWrite = 3u, .byteToRead = 0, .cmdBuf = &g_flashAddrBuf[0u]}
     };
 
 static void flashWriteCmd(CmdType cmd_idx)
@@ -94,7 +97,7 @@ static void flashWriteCmd(CmdType cmd_idx)
 inline static bool flashIsWriteInProgress(void)
 {
     flashWriteCmd(FLASH_READ_STATUS_REG_CMD_IDX);
-    return (bool) (FLASH_WIP_BIT_IDX & (*flashGetCmdBufRef()));
+    return (bool) (FLASH_WIP_BIT_IDX & (flashGetGBufRef()[0u]));
 }
 
 static uint8_t flashGetInterChunkSize(uint32_t size, uint8_t chunk)
@@ -124,17 +127,15 @@ static uint8_t flashGetInterChunkSize(uint32_t size, uint8_t chunk)
 void flashTest(void)
 {
     flashWriteCmd(FLASH_READ_IDENTIFIC_CMD_IDX);
-    //uint8_t *res = flashGetCmdBufRef();
-
     flashWriteCmd(FLASH_READ_STATUS_REG_CMD_IDX);
+}
 
+void flashEraseSector(uint16_t sector)
+{
     flashWriteCmd(FLASH_WR_ENABLE_CMD_IDX);
-    flashWriteCmd(FLASH_READ_STATUS_REG_CMD_IDX);
-
-    g_flashBuf[0u] = 0x02u;
-    flashWriteCmd(FLASH_WR_ENABLE_CMD_IDX);
-    flashWriteCmd(FLASH_READ_STATUS_REG_CMD_IDX);
-
+    (void) flashSetAddrBuf((uint32_t) sector);
+    flashWriteCmd(FLASH_SECTOR_ERASE_CMD_IDX);
+    while( true == flashIsWriteInProgress() ){};
 }
 
 uint8_t flashWriteBlock(uint32_t start_addr, uint32_t size, uint8_t *buf, uint8_t chunk)
@@ -146,9 +147,8 @@ uint8_t flashWriteBlock(uint32_t start_addr, uint32_t size, uint8_t *buf, uint8_
 
         while( true == flashIsWriteInProgress() ){};
 
+        (void) flashSetAddrBuf(start_addr);
         flashWriteCmd(FLASH_WRITE_DATA_CMD_IDX);
-        uint8_t *addr = flashGetAddrBuf(start_addr);
-        spiWrite(addr, FLASH_ADDR_BYTES);
         g_flashBlockOperationInProgress = true;
     }
 
@@ -158,6 +158,7 @@ uint8_t flashWriteBlock(uint32_t start_addr, uint32_t size, uint8_t *buf, uint8_
     {
         g_flashBlockOperationInProgress = false;
         spiSetCS_High();
+        while( true == flashIsWriteInProgress() ){};
         flashWriteCmd(FLASH_WR_DISABLE_CMD_IDX);
         return 0;
     }
@@ -169,9 +170,8 @@ uint8_t flashReadBlock(uint32_t start_addr, uint32_t size, uint8_t *buf, uint8_t
     uint8_t interChunk;
     if( false == g_flashBlockOperationInProgress )
     {
+        (void) flashSetAddrBuf(start_addr);
         flashWriteCmd(FLASH_READ_DATA_CMD_IDX);
-        uint8_t *addr = flashGetAddrBuf(start_addr);
-        spiWrite(addr, FLASH_ADDR_BYTES);
         g_flashBlockOperationInProgress = true;
     }
 
@@ -200,9 +200,12 @@ void flashInit(void)
 {
     spiInit();
     flashTest();
+
+#if(1)
+    flashEraseSector((uint16_t) 0x00u);
     flashWriteAreaObj(&areaObj1);
-    obj1.param1 = 1u;
-    obj1.param2 = 3u;
+#endif
+
     flashReadAreaObj(&areaObj1);
-    flashTest();
+    flashReadBlock(0x00u, FLASH_GBUF_SIZE, flashGetGBufRef(), FLASH_GBUF_SIZE);
 }
