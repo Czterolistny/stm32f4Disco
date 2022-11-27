@@ -50,15 +50,18 @@ void spiInit(void)
 
     spiSetCS_High();
     SPI_Cmd(SPI, ENABLE);
+
+    /* By dafult RxFIFO is set to Full?? */
+    SPI_RxFIFOThresholdConfig(SPI, SPI_RxFIFOThreshold_QF);
 }
 
 void spiWrite(uint8_t *buf, uint8_t len)
 {
 	for(uint8_t i = 0u; i < len; ++i)
 	{
-		SPI_SendData8(SPI, *(buf++));
+        SPI_SendData8(SPI, buf[i]);
 		while(SPI_I2S_GetFlagStatus(SPI, SPI_I2S_FLAG_TXE) == RESET){};
-        //while(SPI_I2S_GetFlagStatus(SPI, SPI_I2S_FLAG_RXNE) == RESET){};
+        while(SPI_I2S_GetFlagStatus(SPI, SPI_I2S_FLAG_RXNE) == RESET){};
 		(uint8_t volatile) *((__IO uint8_t *)&(SPI->DR));
 	}
 	while(SPI_I2S_GetFlagStatus(SPI, SPI_I2S_FLAG_BSY) == SET);
@@ -73,9 +76,9 @@ void spiRead(uint8_t *buf, uint8_t len)
 {
     for(uint8_t i = 0u; i < len; ++i)
 	{
-		SPI_SendData8(SPI, 0u);
+        SPI_SendData8(SPI, 0u);
 		while(SPI_I2S_GetFlagStatus(SPI, SPI_I2S_FLAG_TXE) == RESET){};
         while(SPI_I2S_GetFlagStatus(SPI, SPI_I2S_FLAG_RXNE) == RESET){};
-		*(buf++) = SPI_ReceiveData8(SPI);
+        buf[i] = SPI_ReceiveData8(SPI);
 	}
 }
