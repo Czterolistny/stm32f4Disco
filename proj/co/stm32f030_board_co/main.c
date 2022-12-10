@@ -158,9 +158,12 @@ void TIM3_IRQHandler()
 {
     if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)
     {
-		ControlCtx.req_ready = true;
-		TIM_ITConfig(TIM3, TIM_IT_Update, DISABLE);
-		TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
+		if( 1u < rx_cnt )
+		{
+			ControlCtx.req_ready = true;
+		}
+			TIM_ITConfig(TIM3, TIM_IT_Update, DISABLE);
+			TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
     }
 }
 
