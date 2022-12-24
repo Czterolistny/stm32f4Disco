@@ -8,6 +8,8 @@
 #include "esp.h"
 #include "../../common/common.h"
 
+#include "swuart.h"
+
 #define ESP_CRC_INIT 	(0xB169)
 #define ESP_CRC_POLY 	(0x2f5c)
 const char startSign = ' ';
@@ -19,19 +21,18 @@ const uint8_t estabUDPInitcmd[] = {'A', 'T', '+', 'C', 'I', 'P', 'S', 'T', 'A', 
 
 inline static void espSendATcmd(char *cmd, uint8_t len);
 
-const espConfig *config;
+static espConfig espConf;
+static espConfig *config = &espConf;
 
 void espInit(espConfig *conf)
 {
 	if( (NULL != conf) && (NULL != conf->espWriteATCommand) )
 	{
-		config = conf;
+		config->espWriteATCommand = conf->espWriteATCommand;
 	}else
 		return;
-
+		
 	(*config->espWriteATCommand)((uint8_t *) &estabUDPInitcmd[0], sizeof(estabUDPInitcmd)/sizeof(estabUDPInitcmd[0]));
-
-	delay_ms(1);
 }
 
 static void espSendATcmd(char *cmd, uint8_t len)

@@ -112,20 +112,7 @@ static void swuartRxComplete(uint8_t rxByteNmb)
 	swuartRxCnt = 0;
 }
 
-swUartConfigType *swConf = &swUartConfig;
-
-void swuartTest(void)
-{
-	const uint8_t buf[] = "helloSW_Uart\n";
-
-	swConf->swuartRxCompleteClb = &swuartRxComplete;
-	swConf->swuartRxOneByteCompleteClb = &swuartRxByteComplete;
-	swConf->swuartTxCompleteClb = &swuartTxComplete;
-
-	swuartInit(swConf);
-	swuartSend((uint8_t *)&buf[0], sizeof(buf)/sizeof(buf[0]));
-	for(;;);
-}
+static swUartConfigType *swConf = &swUartConfig;
 
 void USART1_IRQHandler(void)
 {
@@ -162,8 +149,8 @@ void TIM3_IRQHandler()
 		{
 			ControlCtx.req_ready = true;
 		}
-			TIM_ITConfig(TIM3, TIM_IT_Update, DISABLE);
-			TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
+		TIM_ITConfig(TIM3, TIM_IT_Update, DISABLE);
+		TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
     }
 }
 
@@ -302,6 +289,13 @@ void SysTick_Handler()
 
 void initESP(void)
 {
+	swConf->swuartRxCompleteClb = &swuartRxComplete;
+	swConf->swuartRxOneByteCompleteClb = &swuartRxByteComplete;
+	swConf->swuartTxCompleteClb = &swuartTxComplete;
+
+	swuartInit(swConf);
+	/* 5s - I know this beacouse Tyler know this */
+	delay_ms(5000);
 	static espConfig esp_conf;
 	esp_conf.espWriteATCommand = &swuartSend;
 	espInit(&esp_conf);
@@ -326,20 +320,19 @@ int main()
 
 	initTestPin();
 
-	/* SW uart test - never return function */
-	/* swuartTest(); */
-
 	InitUsart1();
+
 	TIM3_Init();
 
 	sregsInit();
-	initESP();
-	gdispInit();
-	
-	i2cInit();
-	flashInit();
 
-	touchInit();
+	gdispInit();
+
+	initESP();
+	
+	//i2cInit();
+	//flashInit();
+	//touchInit();
 	
 	/* never returns */
 	runCoProcEngine(&ControlCtx);

@@ -30,11 +30,8 @@ SRC+=gdispFonts.c
 SRC+=i2c.c
 SRC+=flash.c
 SRC+=spi.c
-<<<<<<< Updated upstream
 SRC+=touch.c
-=======
 SRC+=menu.c
->>>>>>> Stashed changes
 
 # Project Source Files
 COMMON_SRC+=stm32f0xx_it.c

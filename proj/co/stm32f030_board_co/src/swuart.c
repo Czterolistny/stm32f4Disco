@@ -224,13 +224,13 @@ static void swuartPinsInit(void)
 	EXTI_InitStruct.EXTI_Line = swuartEXTLine;
     EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;
     EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Falling;
-    EXTI_InitStruct.EXTI_LineCmd = ENABLE;
+    EXTI_InitStruct.EXTI_LineCmd = DISABLE;
     EXTI_Init(&EXTI_InitStruct);
 	
     NVIC_InitTypeDef NVIC_InitStruct;
 	NVIC_InitStruct.NVIC_IRQChannel = swuartEXTSource;
     NVIC_InitStruct.NVIC_IRQChannelPriority = 0u;/*1u < TIM16 Irq!*/
-    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_InitStruct.NVIC_IRQChannelCmd = DISABLE;
     NVIC_Init(&NVIC_InitStruct);
 }
 
