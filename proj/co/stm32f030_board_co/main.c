@@ -33,11 +33,11 @@
 
 #define CO_CONST_RESP_LEN	((uint8_t) 32u)
 
-#define STR_FAN			"Fan: "
-#define STR_SET_TEMP	"setTemp: "
-#define STR_TEMP1		"Temp1: "
-#define STR_TEMP2		"Temp2: "
-#define STR_EXH_TEMP	"ExhTemp: "
+#define STR_FAN			"Went %: "
+#define STR_SET_TEMP	"TempZad: "
+#define STR_TEMP1		"TempWylot: "
+#define STR_TEMP2		"TempWlot: "
+#define STR_EXH_TEMP	"TempSpalin: "
 
 #define getStrLen(str) (uint8_t)(sizeof(str)/sizeof(char))
 
@@ -90,11 +90,11 @@ typedef struct{
 	uint8_t paramCnt;
 }CoDispCtx;
 
-CoDispParam dispParam[PARAM_CNT] = {{.name = STR_FAN, .len = getStrLen(STR_FAN), .val = &gCoParam[0u], .xpos = 0u, .ypos = 10u},
-						 {.name = STR_SET_TEMP, .len = getStrLen(STR_SET_TEMP), .val = &gCoParam[1u], .xpos = 0u, .ypos = 30u},
-						 {.name = STR_TEMP1, .len = getStrLen(STR_TEMP1), .val = &gCoParam[2u], .xpos = 0u, .ypos = 50u},
-						 {.name = STR_TEMP2, .len = getStrLen(STR_TEMP2), .val = &gCoParam[3u], .xpos = 0u, .ypos = 70u},
-						 {.name = STR_EXH_TEMP, .len = getStrLen(STR_EXH_TEMP), .val = &gCoParam[4u], .xpos = 0u, .ypos = 90u}};
+CoDispParam dispParam[PARAM_CNT] = {{.name = STR_FAN, .len = getStrLen(STR_FAN), .val = &gCoParam[4u], .xpos = 0u, .ypos = 10u},
+						 {.name = STR_SET_TEMP, .len = getStrLen(STR_SET_TEMP), .val = &gCoParam[0u], .xpos = 0u, .ypos = 30u},
+						 {.name = STR_TEMP1, .len = getStrLen(STR_TEMP1), .val = &gCoParam[1u], .xpos = 0u, .ypos = 50u},
+						 {.name = STR_TEMP2, .len = getStrLen(STR_TEMP2), .val = &gCoParam[2u], .xpos = 0u, .ypos = 70u},
+						 {.name = STR_EXH_TEMP, .len = getStrLen(STR_EXH_TEMP), .val = &gCoParam[3u], .xpos = 0u, .ypos = 90u}};
 
 CoDispCtx dispCtx = {.dispParam = getArrRef(dispParam), .paramCnt = PARAM_CNT};
 
@@ -166,7 +166,7 @@ static void writeToDisp(CoDispCtx *dispCtx)
 		strLen = uint_to_string(getArrRef(buf), (uint16_t) *dispCtx->dispParam[ctx].val);
 		gdispWriteText((char*) dispCtx->dispParam[ctx].name, dispCtx->dispParam[ctx].len,\
 		 dispCtx->dispParam[ctx].ypos, dispCtx->dispParam[ctx].xpos);
-		gdispWriteText(getArrRef(buf), strLen, dispCtx->dispParam[ctx].ypos, 20u);
+		gdispWriteText(getArrRef(buf), strLen, dispCtx->dispParam[ctx].ypos, 30u);
 	}
 }
 
