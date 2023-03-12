@@ -3,7 +3,13 @@
 
 #include <stdint.h>
 
+typedef struct{
+    int8_t xCalibPos;
+    int8_t yCalibPos;
+}touchCalibPosType;
+
 void touchInit(void);
-void touchGetPox(uint16_t *xpos, uint16_t *ypos);
+void touchGetCalibratedPos(touchCalibPosType *calibratedPositions);
+void touchCalibrate(void);
 
 #endif

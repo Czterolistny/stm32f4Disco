@@ -43,9 +43,6 @@
 #define gdispPix1Mask           (uint16_t)(0xC007u << gdispPix1Shift)
 #define gdispPix2Mask           (uint16_t)(31u << gdispPix2Shift)
 
-#define gdispXRes               (240u)
-#define gdispYRes               (128u)
-
 #define gdispColMostLeftCorner    (0u)
 #define gdispColMostRightCorner   ((gdispXRes / 3u) - 1u)
 #define gdispRowMostDownCorner    (gdispYRes - 1u)
@@ -100,7 +97,6 @@
 #define gdispSetMostRighDownCorner()    (gdispSetPos(gdispRowMostDownCorner, gdispColMostRightCorner))
 #define gdispSetMiddleOfScreen()        (gdispSetPos(gdispRowMiddleOfScreen, gdispColMiddleOfScreen))
 
-#define gdispCalibPointsNmb             (5u)
 #define gdispCalibPointPixSize          (5u)
 
 static const uint8_t gdispInitBuf[] = {0xe2, 0x25, 0x2b, 0xc4, 0xc8, 0x00, 0xa1, 0xd1, 0x89, 0xd6, 0xeb,
